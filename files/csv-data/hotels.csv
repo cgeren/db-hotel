@@ -1,5 +1,5 @@
 H_ID, UNIT_NUMBER, STREET_NAME, CITY, STATE, ZIP, A_ID
-1000,494,Orchard Street,Kiev,American Samoa,70501,8
+1000,494,Orchard Street,Kiev,Washington,70501,8
 1001,180,Garfield Avenue,Hat Yai,Delaware,85272,4
 1002,36,Forest Avenue,Los Angeles,Louisiana,52365,15
 1003,182,Lincoln Avenue,Suez,Utah,49548,7
@@ -8,13 +8,13 @@ H_ID, UNIT_NUMBER, STREET_NAME, CITY, STATE, ZIP, A_ID
 1006,454,State Street,Changchun,New Jersey,13323,16
 1007,329,5th Street South,Pyongyang,Kentucky,66254,6
 1008,20,Walnut Avenue,Vienna,Wisconsin,62865,15
-1009,227,Hillcrest Avenue,Luanda,Connecticut,25758,16
-1010,448,Garden Street,San Salvador,American Samoa,66702,7
+1009,227,Hillcrest Avenue,Luanda,New York,25758,16
+1010,448,Garden Street,San Salvador,Arizona,66702,7
 1011,422,Oakland Avenue,Quebec City,Guam,28966,13
 1012,168,Broad Street,Mwanza,New Jersey,21882,3
-1013,74,Lafayette Street,Saint Petersburg,Arizona,42534,14
+1013,74,Lafayette Street,Stormwind,Arizona,42534,14
 1014,33,4th Street East,Nanning,Oregon,41440,7
-1015,344,Delaware Avenue,Bulawayo,South Carolina,28920,8
+1015,344,Delaware Avenue,Bulawayo,Texas,28920,8
 1016,75,Elm Avenue,Quebec City,Arkansas,91583,10
 1017,19,4th Street East,Papeete,Michigan,66731,6
 1018,373,Church Street North,Forked River,Iowa,21801,13
