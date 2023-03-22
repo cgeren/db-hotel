@@ -1,3 +1,4 @@
+ROOM_NUM, H_ID, ROOM_TYPE, R_STATUS
 556,1009,Single,Clean
 391,1016,California,Occupied
 306,1010,Suite,Clean
