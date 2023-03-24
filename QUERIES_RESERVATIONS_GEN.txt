@@ -1,0 +1,71 @@
+UPDATING RESERVATIONS TO POP START DATE:
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+UPDATE reservations
+    SET start_date =
+        CASE
+            WHEN EXISTS (
+                SELECT c_id
+                FROM customer
+                WHERE reservations.c_id = customer.c_id and
+                c_status = 'Past')
+            THEN (SELECT random_date(DATE '1975-01-06', DATE '2023-02-14') from dual)
+            WHEN EXISTS (
+                SELECT c_id
+                FROM customer
+                WHERE reservations.c_id = customer.c_id and
+                c_status = 'Current')
+            THEN (SELECT random_date(DATE '2023-02-15', DATE '2023-02-22') FROM dual)
+            ELSE (SELECT random_date(DATE '2023-02-23', DATE '2099-12-31') FROM dual)
+        END;
+--------------------------------------------------------------------------------
+UPDATING RESERVATIONS TO POP END DATE:
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+UPDATE reservations
+    SET end_date = reservations.start_date + (floor(dbms_random.value(1, 7)));
+--------------------------------------------------------------------------------
+
+UPDATING RESERVATIONS TO POP CHECK_IN CHECK_OUT
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+UPDATE reservations
+    SET check_in =
+        (SELECT random_timestamp(reservations.start_date, reservations.start_date + 1) from dual),
+        check_out =
+        (SELECT random_timestamp(reservations.end_date - 1, reservations.end_date) from dual)
+--------------------------------------------------------------------------------
+
+FUNCTION TO COMPUTE COST IN DOL PER DAY:
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+create or replace FUNCTION compute_cost_dol
+    (date_in in DATE,
+     date_out in DATE,
+     room_number in VARCHAR2,
+     hotel_id in VARCHAR2)
+     RETURN NUMBER
+IS
+    totalCost NUMBER(6,2);
+    dol_per_day NUMBER(5,2);
+
+BEGIN
+    SELECT dol_per INTO dol_per_day
+        FROM room_types
+        WHERE h_id = hotel_id and
+        EXISTS (
+            SELECT h_id, room_num
+            FROM room
+            WHERE room.h_id = hotel_id and
+            room.room_num = room_number and
+            room_types.room_type = room.room_type);             /*<-- Technically not necessary but it makes me feel better.*/
+    totalCost := (date_out - date_in) * dol_per_day;
+    RETURN totalCost;
+END;
+--------------------------------------------------------------------------------
+
+UPDATING COST DOL_PER_DAY:
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+UPDATE reservations
+    SET cost = (SELECT compute_cost_dol(reservations.start_date, reservations.end_date, reservations.room_num, reservations.h_id) FROM dual)
