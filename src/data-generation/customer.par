@@ -1,6 +1,0 @@
-userid=cdg225@//edgar1.cse.lehigh.edu:1521/cse241
-control=control/customer.ctl
-log=logs/customer.log
-bad=bad/customer.bad
-data=data/customer.dat
-direct=true
