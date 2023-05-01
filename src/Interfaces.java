@@ -2,6 +2,8 @@ import java.util.Scanner;
 import java.io.*;
 import java.sql.*;
 import java.util.ArrayList;
+import java.time.LocalDate;
+import java.util.Date;
 
 public class Interfaces {
     public static void main(String[] args)
@@ -100,7 +102,6 @@ public class Interfaces {
     public static void customerInterface(Scanner scanner, Connection connection) throws SQLException {
         String cityQuery = "SELECT city, state FROM hotel";
         Statement cityStatement = connection.createStatement();
-        ResultSet cityResult = cityStatement.executeQuery(cityQuery);
 
         String preparedCityStatement = "SELECT * FROM hotel WHERE city = ?";
         PreparedStatement userCityQuery = connection.prepareStatement(preparedCityStatement);
@@ -110,6 +111,7 @@ public class Interfaces {
         while (!isExit) {
             isValid = false;
             while (!isValid) {
+                ResultSet cityResult = cityStatement.executeQuery(cityQuery);
                 System.out.println("\t1. Make a Reservation\n" +
                         "\t2. View List of Locations\n" +
                         "\t3. Back");
@@ -131,6 +133,8 @@ public class Interfaces {
                         userCityQuery.setString(1, cityInput);
                         ResultSet hotelInCity = userCityQuery.executeQuery();
 
+                        String selectedHotelId = "";
+
                         if (!hotelInCity.next()) {
                             System.out.println("We currently do not have any Hotel California locations in " + cityInput +
                                     ". You may view a list of available locations by pressing '2'.");
@@ -138,6 +142,7 @@ public class Interfaces {
                             int counter = 1;
                             ArrayList<String> hotelIds = new ArrayList<String>();
                             System.out.println("We currently have the following locations in " + cityInput + ":");
+                            System.out.println("Please note they may not all be in the same state.\n");
                             do {
                                 System.out.println(counter + ".\t" + hotelInCity.getString("unit_number") +
                                         " " + hotelInCity.getString("street_name") + " " + hotelInCity.getString("city") +
@@ -146,12 +151,32 @@ public class Interfaces {
                                 counter++;
                             } while (hotelInCity.next());
                             System.out.println("\nPlease press the number associated with the hotel you would like to choose.");
+
+                            boolean isValidHotel = false;
+                            while (!isValidHotel) {
+                                int hotelSelection = testValidInteger(1, counter - 1, scanner);
+
+                                if (hotelSelection > 0) {
+                                    isValidHotel = true;
+                                    selectedHotelId = hotelIds.get(hotelSelection - 1);
+                                } else {
+                                    System.out.println("Not a valid input. Please try again.");
+                                }
+                            }
                         }
+
+                        System.out.println("Please enter your preferred check-in date.\nYear (YYYY):");
+
+                        Date currentDate = new Date();
+
+
+                        System.out.println("Please enter the number of nights you would like to stay:");
+
                         break;
                     case 2:
                         if (!cityResult.next()) {
-                            System.out.println("Hotel California is Currently Only Servicing" +
-                                    "Extraterrestrial Colonies due to the ongoing Chaos Space Marine invasion.");
+                            System.out.println("Hotel California is currently only servicing " +
+                                    "extraterrestrial colonies due to the ongoing Chaos Space Marine invasion.");
                         } else {
                             System.out.println("List of cities with Hotel California locations:\n");
                             while (cityResult.next()) {
