@@ -2,7 +2,10 @@ import java.util.Scanner;
 import java.io.*;
 import java.sql.*;
 import java.util.ArrayList;
+import java.time.ZonedDateTime;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.*;
 import java.util.Date;
 
 public class Interfaces {
@@ -92,6 +95,26 @@ public class Interfaces {
         }
     }
 
+    public static LocalDate getValidDate(Scanner scanner) throws DateTimeException {
+        ZoneId zone = ZoneId.of("America/Montreal");
+        ZonedDateTime currentTime = ZonedDateTime.now(zone);
+
+        LocalDate inputTime;
+
+        System.out.println("Please enter the year (YYYY):");
+        int inputYear = testValidInteger(currentTime.getYear(), 2099, scanner);
+
+        System.out.println("Please enter the month: (M/MM)");
+        int inputMonth = testValidInteger(1, 12, scanner);
+
+        inputTime = LocalDate.of(inputYear, inputMonth, 1); //initialize localdate object to retrieve length of month for day input
+
+        System.out.println("Please enter the day: (D/DD)");
+        int inputDay = testValidInteger(1, inputTime.lengthOfMonth(), scanner);
+
+        return inputTime.withDayOfMonth(inputDay);
+    }
+
     /**
      * Customer Interface function, enables the creation of reservations, viewing of all cities with hotels,
      * login and creation of new user as well as the option to enroll in the Hotel California frequent guest
@@ -108,6 +131,7 @@ public class Interfaces {
 
         int selection = -1;
         boolean isValid = false, isExit = false;
+        scanner.nextLine();
         while (!isExit) {
             isValid = false;
             while (!isValid) {
@@ -125,7 +149,7 @@ public class Interfaces {
                 }
 
                 switch (selection) {
-                    case 1:
+                    case 1: //make a reservation case
                         scanner.nextLine();
                         System.out.println("Please enter a city you would like to stay in:");
                         String cityInput = scanner.nextLine();
@@ -163,17 +187,27 @@ public class Interfaces {
                                     System.out.println("Not a valid input. Please try again.");
                                 }
                             }
+                            System.out.println("Please enter your preferred check-in date.");
+                            LocalDate inputDate = LocalDate.now();
+
+                            boolean isValidDate = false;
+
+                            while (!isValidDate) {
+                                try {
+                                    inputDate = getValidDate(scanner);
+                                    isValidDate = true;
+                                } catch (DateTimeException d) {
+                                    System.out.println("Date input format incorrect. Remember to enter your dates as the prompts direct.");
+                                }
+                            }
+
+                            System.out.println("Your check-in date is: " + inputDate.toString());
+
+                            System.out.println("Please enter the number of nights you would like to stay:");
                         }
 
-                        System.out.println("Please enter your preferred check-in date.\nYear (YYYY):");
-
-                        Date currentDate = new Date();
-
-
-                        System.out.println("Please enter the number of nights you would like to stay:");
-
                         break;
-                    case 2:
+                    case 2: //show list of locations, queried through database
                         if (!cityResult.next()) {
                             System.out.println("Hotel California is currently only servicing " +
                                     "extraterrestrial colonies due to the ongoing Chaos Space Marine invasion.");
@@ -186,7 +220,7 @@ public class Interfaces {
                             }
                         }
                         break;
-                    case 3:
+                    case 3: // return to main menu
                         System.out.println("Exiting to main menu...");
                         isExit = true;
                 }
