@@ -95,24 +95,284 @@ public class Interfaces {
         }
     }
 
+    public static long testValidLong(long min, long max, Scanner scanner) {
+        while (!scanner.hasNextLong()) {
+            System.out.println("That is not an integer. Please try again.");
+            scanner.nextLine();
+        }
+        long input = scanner.nextLong();
+        if (input <= max && input >= min) {
+            return input;
+        } else {
+            return 0;
+        }
+    }
+
+    /**
+     * What I get for not making all of my primary keys auto increments and being too lazy to change all of my tables.
+     * I am certain this oversight will create concurrency issues.
+     * @param table_name
+     * @param id_name
+     * @param connection
+     * @return
+     */
+    public static String fetchLatestID(int table, Connection connection) throws SQLException {
+        String latestID = "";
+        String preparedLatestID = "";
+
+        /*
+        Ya I know it's janky
+         */
+        switch (table) {
+            case 1:
+                preparedLatestID = "SELECT MAX(r_id) as MAXID FROM reservations";
+                break;
+            case 2:
+                preparedLatestID = "SELECT MAX(c_id) as MAXID FROM customer";
+                break;
+            default:
+                preparedLatestID = "SELECT MAX(t_id) as MAXID FROM transactions";
+                break;
+        }
+
+        PreparedStatement latestIDQuery = connection.prepareStatement(preparedLatestID);
+
+        ResultSet latestIdResult = latestIDQuery.executeQuery();
+
+        if (!latestIdResult.next()) {
+            System.out.println("Something went wrong.");
+            return latestID;
+        } else {
+            do {
+                latestID = latestIdResult.getString("MAXID");
+                System.out.println(latestID);
+            } while (latestIdResult.next());
+        }
+
+        latestIDQuery.close();
+        return latestID;
+    }
+
     public static LocalDate getValidDate(Scanner scanner) throws DateTimeException {
         ZoneId zone = ZoneId.of("America/Montreal");
         ZonedDateTime currentTime = ZonedDateTime.now(zone);
 
         LocalDate inputTime;
 
-        System.out.println("Please enter the year (YYYY):");
-        int inputYear = testValidInteger(currentTime.getYear(), 2099, scanner);
+        System.out.println("Today's date: " + currentTime.toString());
 
-        System.out.println("Please enter the month: (M/MM)");
-        int inputMonth = testValidInteger(1, 12, scanner);
+        int inputYear = 0;
+        boolean isValid = false;
+        while (!isValid) {
+            System.out.println("Please enter the year (YYYY):");
+            inputYear = testValidInteger(currentTime.getYear(), 2099, scanner);
+            if (inputYear == 0) {
+                System.out.println("Invalid year. Enter only integers, and ensure year is not in the past.");
+            } else {
+                isValid = true;
+            }
+        }
+
+        int inputMonth = 0;
+        isValid = false;
+        while (!isValid) {
+            System.out.println("Please enter the month: (M/MM)");
+            if (inputYear == currentTime.getYear()) {
+                inputMonth = testValidInteger(currentTime.getMonthValue(), 12, scanner);
+            } else {
+                inputMonth = testValidInteger(1, 12, scanner);
+            }
+            if (inputMonth == 0) {
+                System.out.println("Invalid month. Enter only integers, and ensure your month is not in the past.");
+            } else {
+                isValid = true;
+            }
+        }
 
         inputTime = LocalDate.of(inputYear, inputMonth, 1); //initialize localdate object to retrieve length of month for day input
 
-        System.out.println("Please enter the day: (D/DD)");
-        int inputDay = testValidInteger(1, inputTime.lengthOfMonth(), scanner);
+        int inputDay = 0;
+        isValid = false;
+        while(!isValid) {
+            System.out.println("Please enter the day: (D/DD)");
+            if (inputYear == currentTime.getYear() && inputMonth == currentTime.getMonthValue()) {
+                inputDay = testValidInteger(currentTime.getDayOfMonth(), inputTime.lengthOfMonth(), scanner);
+            } else {
+                inputDay = testValidInteger(1, inputTime.lengthOfMonth(), scanner);
+            }
+            if (inputDay == 0) {
+                System.out.println("Invalid day. Enter only integers, and ensure your day is appropriate for the month you have chosen.");
+            } else {
+                isValid = true;
+            }
+        }
 
         return inputTime.withDayOfMonth(inputDay);
+    }
+
+    public static float createReservation(Connection connection, String customerID, String hotelID,
+                                         String reservationID, String room_type,
+                                         LocalDate start_date, LocalDate end_date) throws SQLException {
+        CallableStatement createReservation = connection.prepareCall("{call createReservation(?, ?, ?, ?, ?, ?)}");
+        createReservation.setString(1, reservationID);
+        createReservation.setString(2, customerID);
+        createReservation.setString(3, hotelID);
+        createReservation.setDate(4, java.sql.Date.valueOf(start_date.toString()));
+        createReservation.setDate(5, java.sql.Date.valueOf(end_date.toString()));
+        createReservation.setString(6, room_type);
+
+        createReservation.execute();
+
+        String fetchCostString = "SELECT cost FROM reservations WHERE r_id = ?";
+        PreparedStatement fetchCostQuery = connection.prepareStatement(fetchCostString);
+        fetchCostQuery.setString(1, reservationID);
+
+        ResultSet costResult = fetchCostQuery.executeQuery();
+
+        float cost = 0;
+
+        if (!costResult.next()) {
+            System.out.println("An error occurred. Your reservation is corrupted.");
+        } else {
+            do {
+                cost = costResult.getFloat("cost");
+            } while (costResult.next());
+        }
+        return cost;
+    }
+
+    public static void validateUserCreateRes(Scanner scanner, Connection connection, String hotel_id, String room_type, LocalDate start_date, LocalDate end_date) throws SQLException {
+        String customerId = "";
+        boolean isValidUser = false;
+        long maxPhone = 9999999999L;
+
+        while (!isValidUser) {
+            System.out.println("Are you a new or returning customer?\n1. New\n2. Returning");
+            int customerType = testValidInteger(1, 2, scanner);
+            if (customerType == 1) {
+                scanner.nextLine();
+                System.out.println("Welcome to the Hotel California chain of hotels! To begin, please enter your first name: ");
+                String firstNameNewInput = scanner.nextLine();
+                System.out.println("Last name: ");
+                String lastNameNewInput = scanner.nextLine();
+                System.out.println("Phone number: ");
+                long phoneInputNew = testValidLong(1000000000, maxPhone, scanner);
+
+                String checkPhoneExists = "SELECT COUNT(phone) as NUMPHONES\n" +
+                        "FROM customer\n" +
+                        "WHERE phone = ?";
+                PreparedStatement phoneExistsQuery = connection.prepareStatement(checkPhoneExists);
+                phoneExistsQuery.setLong(1, phoneInputNew);
+                ResultSet phoneExistsResult = phoneExistsQuery.executeQuery();
+                int numPhonesSame = 0;
+
+                if (!phoneExistsResult.next()) {
+                    System.out.println("An error occurred fetching data from the server.");
+                } else {
+                    do {
+                        numPhonesSame = phoneExistsResult.getInt("NUMPHONES");
+                    } while (phoneExistsResult.next());
+                }
+
+                if (numPhonesSame > 0) {
+                    System.out.println("A user with that phone number already exists.");
+                } else {
+                    System.out.println("Would you like to sign up for our frequent stayer program? Y/N");
+                    String frequentInput = "";
+                    int points = 0;
+                    boolean isValidResult = false;
+                    while (!isValidResult) {
+                        scanner.nextLine();
+                        frequentInput = scanner.nextLine();
+                        if (frequentInput.equals("Y")) {
+                            System.out.println("Wonderful! You have a balance of 0 points.");
+                            isValidResult = true;
+                        } else if (frequentInput.equals("N")) {
+                            System.out.println("We hope you will change your mind in the future :)");
+                            isValidResult = true;
+                            points = -1;
+                        } else {
+                            System.out.println("Please only enter, 'Y' or 'N'. Try again.");
+                        }
+                    }
+
+                    System.out.println("Please enter your 16-digit credit card number.");
+
+                    /*
+                    long cc_number = testValidLong(100000000000000L, 9999999999999999L, connection);
+
+                    String latestCustomerID = fetchLatestID("customer", "c_id");
+
+
+                     */
+
+
+                }
+            } else {
+                scanner.nextLine();
+                System.out.println("Please enter your last name: ");
+                String lastNameInput = scanner.nextLine();
+
+                System.out.println("Please enter your phone number: ");
+                long phoneNumberInput = testValidLong(1000000000, maxPhone, scanner);
+
+                PreparedStatement customerQuery = null;
+                String preparedCustomer = null;
+                ResultSet customerResult = null;
+
+                try {
+                    preparedCustomer = "SELECT c_id, first_name FROM customer WHERE last_name = ? and phone = ?";
+                    customerQuery = connection.prepareStatement(preparedCustomer);
+
+                    customerQuery.setString(1, lastNameInput);
+                    customerQuery.setLong(2, phoneNumberInput);
+
+                    customerResult = customerQuery.executeQuery();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                if (!customerResult.next()) {
+                    System.out.println("A customer with that last name and phone number does not exist.");
+                } else {
+                    System.out.println("Success!");
+                    do {
+                        System.out.println("Welcome, " + customerResult.getString("first_name"));
+                        customerId = customerResult.getString("c_id");
+                    } while (customerResult.next());
+                    isValidUser = true;
+                    System.out.println("Creating a reservation at your selected hotel...");
+
+                    String latestID = null;
+                    String newIDString = null;
+                    try {
+                        latestID = fetchLatestID(1, connection);
+
+                        System.out.println("LATESTID: " + latestID);
+
+                        Long newID = Long.parseLong(latestID);
+                        newID += 1;
+                        newIDString = newID.toString();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        System.out.println("An error occurred while accessing the Hotel California servers. We are sorry " +
+                                "for any inconvenience.");
+                        return;
+                    }
+                    float costRes = 0;
+                    try {
+                        costRes = createReservation(connection, customerId, hotel_id, newIDString, room_type, start_date, end_date);
+                    } catch (Exception e) {
+                        System.out.println("There was an error while attempting to create your reservation. We are sorry" +
+                                "for any inconvenience.");
+                        return;
+                    }
+                    System.out.println("Success! Your reservation was created. You will be charged " +
+                            costRes + " at the time of check in. Have a nice day.");
+                }
+                customerQuery.close();
+            }
+        }
     }
 
     /**
@@ -201,11 +461,155 @@ public class Interfaces {
                                 }
                             }
 
-                            System.out.println("Your check-in date is: " + inputDate.toString());
-
                             System.out.println("Please enter the number of nights you would like to stay:");
-                        }
 
+                            int numberNights = 0;
+                            boolean isValidNights = false;
+
+                            while (!isValidNights) {
+                                numberNights = testValidInteger(1, 30, scanner);
+                                if (numberNights > 0) {
+                                    isValidNights = true;
+                                } else {
+                                    System.out.println("Invalid input, remember you cannot stay at any Hotel California locations for more" +
+                                            "30 days with a single reservation.");
+                                }
+                            }
+
+                            System.out.println("Your check-in date is: " + inputDate.toString() + " and you will be staying with us for " +
+                                    numberNights + " nights.");
+                            System.out.println("Your check-out date is then " + inputDate.plusDays(numberNights).toString() + ". Continue? (Y/N)");
+
+                            String continueInput = "";
+                            boolean isValidContinue = false;
+                            boolean isMainMenu = false;
+                            while (!isValidContinue) {
+                                scanner.nextLine();
+                                continueInput = scanner.nextLine();
+                                if (continueInput.equals("Y")) {
+                                    isValidContinue = true;
+                                } else if (continueInput.equals("N")) {
+                                    System.out.println("Exiting to main menu...");
+                                    isValidContinue = true;
+                                    isMainMenu = true;
+                                } else {
+                                    System.out.println("Please only enter, 'Y' or 'N'. Try again.");
+                                }
+                            }
+
+                            if (!isMainMenu) {
+                                PreparedStatement preparedRoomTypesExistsQuery = null;
+                                ResultSet roomTypesResult = null;
+                                try {
+                                    String preparedRoomTypesStatement = "SELECT DISTINCT\n" +
+                                                "room_type,\n" +
+                                                "capacity,\n" +
+                                                "num_beds,\n" +
+                                                "has_kitchen,\n" +
+                                                "num_rooms,\n" +
+                                                "dol_per,\n" +
+                                                "pts_per\n" +
+                                                "FROM room_types\n" +
+                                                "WHERE\n" +
+                                                "h_id = ?";
+                                    preparedRoomTypesExistsQuery = connection.prepareStatement(preparedRoomTypesStatement);
+
+                                    preparedRoomTypesExistsQuery.setString(1, selectedHotelId);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+
+                                int roomSelection = 0;
+                                String roomSelected = "";
+
+                                boolean isValidRoom = false;
+                                while (!isValidRoom) {
+                                    roomTypesResult = preparedRoomTypesExistsQuery.executeQuery();
+                                    System.out.println("\nYour Hotel California location is currently offering the following rooms: ");
+                                    try {
+                                        if (!roomTypesResult.next()) {
+                                            System.out.println("Your location is offering no rooms at this time.");
+                                        } else {
+                                            System.out.println(String.format("%-15s%-10s%-10s%-10s%-10s%-10s%-10s", "Room Type", "Capacity", "Beds", "Kitchen",
+                                                    "Rooms", "Dol/Night", "Pts/Night"));
+                                            System.out.println("---------------------------------------------------------------------------------------------");
+                                            do {
+                                                System.out.println(String.format("%-15s%-10d%-10d%-10d%-10d%-10d%-10d", roomTypesResult.getString("room_type"),
+                                                        roomTypesResult.getInt("capacity"), roomTypesResult.getInt("num_beds"),  roomTypesResult.getInt("has_kitchen"),
+                                                        roomTypesResult.getInt("num_rooms"), roomTypesResult.getInt("dol_per"), roomTypesResult.getInt("pts_per")));
+                                            } while (roomTypesResult.next());
+                                        }
+                                    } catch (Exception e) {
+                                        System.out.println("An error has occurred.");
+                                    }
+                                    System.out.println("To reserve one, please enter the digit corresponding to the proper room type:\n" +
+                                            "1. Single\n2. Double\n3. Suite\n4. California\n5. Exit");
+                                    roomSelection = testValidInteger(1, 5, scanner);
+                                    if (roomSelection > 0) {
+                                        switch (roomSelection) {
+                                            case 1:
+                                                roomSelected = "Single";
+                                                break;
+                                            case 2:
+                                                roomSelected = "Double";
+                                                break;
+                                            case 3:
+                                                roomSelected = "Suite";
+                                                break;
+                                            case 4:
+                                                roomSelected = "California";
+                                                break;
+                                            case 5:
+                                                isMainMenu = true;
+                                                isValidRoom = true;
+                                                break;
+                                            default:
+                                                roomSelected = "A Secret Fifth Thing";
+                                                break;
+                                        }
+                                        isValidRoom = true;
+                                    } else {
+                                        System.out.println("Invalid input. Please try again.");
+                                    }
+
+                                    if (roomSelection != 5) {
+                                        ResultSet roomResult;
+                                        System.out.println("You have selected a " + roomSelected + ".");
+                                        try {
+                                            String preparedRoomAvailabile = "SELECT TOTAL_AVAILABLE( ? , ? , ? , ? ) AS result FROM dual";
+                                            PreparedStatement roomAvailableQuery = connection.prepareStatement(preparedRoomAvailabile);
+                                            roomAvailableQuery.setDate(1, java.sql.Date.valueOf(inputDate.toString()));
+                                            roomAvailableQuery.setInt(2, numberNights);
+                                            roomAvailableQuery.setString(3, roomSelected);
+                                            roomAvailableQuery.setString(4, selectedHotelId);
+
+                                            roomResult = roomAvailableQuery.executeQuery();
+
+                                            if (!roomResult.next()) {
+                                                System.out.println("An error occurred fetching available rooms.");
+                                            }
+                                            do {
+                                                int roomResultInteger = Integer.parseInt(roomResult.getString("result"));
+                                                if (roomResultInteger == 0) {
+                                                    System.out.println("We are sorry. There are no available rooms of that type in your hotel. Returning to room type selection...");
+                                                    isValidRoom = false;
+                                                } else {
+                                                    System.out.println("There is an available room of that type in this hotel. Continuing to user information...");
+                                                }
+                                            } while (roomResult.next());
+                                            roomAvailableQuery.close();
+                                        } catch (Exception e) {
+                                            System.out.println("An unexpected error has occurred while fetching rooms, we are sorry for the inconvenience.");
+                                        }
+
+                                        validateUserCreateRes(scanner, connection, selectedHotelId, roomSelected, inputDate, inputDate.plusDays(numberNights));
+                                    } else {
+                                        System.out.println("Returning to customer menu...");
+                                    }
+                                }
+                                preparedRoomTypesExistsQuery.close();
+                            }
+                        }
                         break;
                     case 2: //show list of locations, queried through database
                         if (!cityResult.next()) {
@@ -226,6 +630,8 @@ public class Interfaces {
                 }
             }
         }
+        userCityQuery.close();
+
         return;
     }
 }
