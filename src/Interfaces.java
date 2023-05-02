@@ -9,6 +9,8 @@ import java.time.*;
 import java.util.Date;
 
 public class Interfaces {
+    private String roomTypeGlobal = "";
+
     public static void main(String[] args)
             throws SQLException, IOException, java.lang.ClassNotFoundException {
         System.out.println("Login to the Hotel California Database:");
@@ -57,7 +59,12 @@ public class Interfaces {
                         System.out.println("Front-Desk Interface");
                         break;
                     case (3):
-                        System.out.println("Housekeeping Interface");
+                        System.out.println("Housekeeping User Interface");
+                        try {
+                            housekeepingInterface(scanner, connection);
+                        } catch (SQLException sqlException) {
+                            System.out.println("An unexpected error has occurred. Returning to main menu...");
+                        }
                         break;
                     case (4):
                         System.out.println("King of Da Highway Interface");
@@ -250,6 +257,15 @@ public class Interfaces {
                 cost = costResult.getFloat("cost");
             } while (costResult.next());
         }
+
+        CallableStatement updateRoomNum = connection.prepareCall("{call updateRoomNum(?, ?, ?, ?)}");
+        updateRoomNum.setString(1, room_type);
+        updateRoomNum.setString(2, reservationID);
+        updateRoomNum.setString(3, hotelID);
+        updateRoomNum.setDate(4, java.sql.Date.valueOf(end_date.toString()));
+
+        updateRoomNum.execute();
+
         return cost;
     }
 
@@ -354,7 +370,8 @@ public class Interfaces {
                     try {
                         costRes = createReservation(connection, customerNewIDString, hotel_id, newResIDString, room_type, start_date, end_date);
                     } catch (Exception e) {
-                        System.out.println("There was an error while attempting to create your reservation. We are sorry" +
+                        e.printStackTrace();
+                        System.out.println("There was an error while attempting to create your reservation. We are sorry " +
                                 "for any inconvenience.");
                         return;
                     }
@@ -414,8 +431,9 @@ public class Interfaces {
                     try {
                         costRes = createReservation(connection, customerId, hotel_id, newIDString, room_type, start_date, end_date);
                     } catch (Exception e) {
+                        e.printStackTrace();
                         System.out.println("There was an error while attempting to create your reservation. We are sorry" +
-                                "for any inconvenience.");
+                                " for any inconvenience.");
                         return;
                     }
                     System.out.println("Success! Your reservation was created. You will be charged " +
@@ -424,6 +442,108 @@ public class Interfaces {
                 customerQuery.close();
             }
         }
+    }
+
+    public static void housekeepingInterface(Scanner scanner, Connection connection) throws SQLException {
+        String cityQuery = "SELECT city, state FROM hotel";
+        Statement cityStatement = connection.createStatement();
+
+        String preparedCityStatement = "SELECT * FROM hotel WHERE city = ?";
+        PreparedStatement userCityQuery = connection.prepareStatement(preparedCityStatement);
+
+        scanner.nextLine();
+        System.out.println("Enter the name of the city in which you work:");
+        String cityInput = scanner.nextLine();
+
+        userCityQuery.setString(1, cityInput);
+        ResultSet hotelInCity = userCityQuery.executeQuery();
+
+        String selectedHotelId = "";
+
+        if (!hotelInCity.next()) {
+            System.out.println("You have entered an invalid city name. Try again, or press '2' for a list of locations.");
+        } else {
+            int counter = 1;
+            ArrayList<String> hotelIds = new ArrayList<String>();
+            System.out.println("List of locations for " + cityInput + ":");
+            System.out.println("Please remember to select the location in your state.\n");
+            do {
+                System.out.println(counter + ".\t" + hotelInCity.getString("unit_number") +
+                        " " + hotelInCity.getString("street_name") + " " + hotelInCity.getString("city") +
+                        ", " + hotelInCity.getString("state") + " " + hotelInCity.getString("zip"));
+                hotelIds.add(hotelInCity.getString("h_id"));
+                counter++;
+            } while (hotelInCity.next());
+            System.out.println("\nPlease press the number associated with the hotel you work at.");
+
+            boolean isValidHotel = false;
+            while (!isValidHotel) {
+                int hotelSelection = testValidInteger(1, counter - 1, scanner);
+
+                if (hotelSelection > 0) {
+                    isValidHotel = true;
+                    selectedHotelId = hotelIds.get(hotelSelection - 1);
+                } else {
+                    System.out.println("Not a valid input. Please try again.");
+                }
+            }
+
+            System.out.println("Welcome, treasured staff. Attend the pizza party this Friday." +
+                    "\nRemember, all attempts to unionize will be thwarted and pizza will be cancelled.");
+
+            System.out.println("The following list is of dirty rooms within the hotel\n" +
+                    "Please enter room numbers of all that have been cleaned. When you are done, press (1) for done.");
+
+            String preparedDirtyString = "SELECT\n" +
+                    "room_num, r_status\n" +
+                    "FROM\n" +
+                    "room\n" +
+                    "WHERE\n" +
+                    "h_id = ? and\n" +
+                    "r_status = 'Dirty'";
+
+            PreparedStatement preparedDirtyQuery = connection.prepareStatement(preparedDirtyString);
+            preparedDirtyQuery.setString(1, selectedHotelId);
+
+            ResultSet dirtyResult = preparedDirtyQuery.executeQuery();
+
+            if (!dirtyResult.next()) {
+                System.out.println("There are no dirty rooms. Great work team. No raises.");
+            } else {
+                System.out.println("Room Number\n-------------");
+                do {
+                    System.out.println(dirtyResult.getInt("room_num"));
+                } while (dirtyResult.next());
+            }
+
+            int housekeepingInput = 0;
+
+            boolean moreCleaned = true;
+            while (moreCleaned) {
+                housekeepingInput = testValidInteger(1, 999, scanner);
+
+                if (housekeepingInput > 1) {
+                    CallableStatement setCleanRoom = connection.prepareCall("{call setCleanRoom(?, ?)}");
+                    setCleanRoom.setString(1, selectedHotelId);
+                    setCleanRoom.setInt(2, housekeepingInput);
+                    try {
+                        setCleanRoom.execute();
+
+                        System.out.println("Room " + housekeepingInput + " successfully set to clean.\n" +
+                                "Note that if the room you entered is incorrect, this will have no affect.");
+                    } catch (Exception e) {
+                        System.out.println("An error occurred while updating room status, ensure your room is" +
+                                "\nlisted above.");
+                    }
+                    setCleanRoom.close();
+                } else {
+                    moreCleaned = false;
+                    System.out.println("Exiting...");
+                }
+            }
+            preparedDirtyQuery.close();
+        }
+        userCityQuery.close();
     }
 
     /**
