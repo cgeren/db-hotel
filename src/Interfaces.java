@@ -145,7 +145,6 @@ public class Interfaces {
         } else {
             do {
                 latestID = latestIdResult.getString("MAXID");
-                System.out.println(latestID);
             } while (latestIdResult.next());
         }
 
@@ -208,6 +207,19 @@ public class Interfaces {
         }
 
         return inputTime.withDayOfMonth(inputDay);
+    }
+
+    public static void createCustomer(Connection connection, String customerID, String first_name, String last_name,
+                                      long phone, int points, long cc_num) throws SQLException {
+        CallableStatement createCustomer = connection.prepareCall("{call createCustomer(?, ?, ?, ?, ?, ?)}");
+        createCustomer.setString(1, customerID);
+        createCustomer.setString(2, first_name);
+        createCustomer.setString(3, last_name);
+        createCustomer.setLong(4, phone);
+        createCustomer.setInt(5, points);
+        createCustomer.setLong(6, cc_num);
+
+        createCustomer.execute();
     }
 
     public static float createReservation(Connection connection, String customerID, String hotelID,
@@ -277,6 +289,7 @@ public class Interfaces {
                 if (numPhonesSame > 0) {
                     System.out.println("A user with that phone number already exists.");
                 } else {
+                    isValidUser = true;
                     System.out.println("Would you like to sign up for our frequent stayer program? Y/N");
                     String frequentInput = "";
                     int points = 0;
@@ -285,10 +298,11 @@ public class Interfaces {
                         scanner.nextLine();
                         frequentInput = scanner.nextLine();
                         if (frequentInput.equals("Y")) {
-                            System.out.println("Wonderful! You have a balance of 0 points.");
+                            System.out.println("Wonderful! You have a balance of 0 points. You gain points when you pay for" +
+                                    "\nreservations, our current point rate is 1 point for every 10 dollars you spend!");
                             isValidResult = true;
                         } else if (frequentInput.equals("N")) {
-                            System.out.println("We hope you will change your mind in the future :)");
+                            System.out.println("We hope you will change your mind in the future :) It is free money.");
                             isValidResult = true;
                             points = -1;
                         } else {
@@ -296,17 +310,55 @@ public class Interfaces {
                         }
                     }
 
-                    System.out.println("Please enter your 16-digit credit card number.");
+                    System.out.println("\nPlease enter your 16-digit credit card number.");
 
-                    /*
-                    long cc_number = testValidLong(100000000000000L, 9999999999999999L, connection);
+                    long cc_number = testValidLong(100000000000000L, 9999999999999999L, scanner);
 
-                    String latestCustomerID = fetchLatestID("customer", "c_id");
+                    String customerNewIDString = null;
+                    try {
+                        String latestCustomerID = fetchLatestID(2, connection);
+                        Long newCustomerID = Long.parseLong(latestCustomerID);
+                        newCustomerID += 1;
+                        customerNewIDString = newCustomerID.toString();
+                    } catch (Exception e) {
+                        System.out.println("Something went wrong while fetching from the Hotel California servers.");
+                        return;
+                    }
 
+                    try {
+                        createCustomer(connection, customerNewIDString, firstNameNewInput, lastNameNewInput, phoneInputNew, points, cc_number);
+                    } catch (Exception e) {
+                        System.out.println("Something went wrong while initializing your new customer profile. You may have entered duplicate input.\n" +
+                                "We apologize for the inconvenience.");
+                        return;
+                    }
+                    System.out.println("New customer profile created successfully! Welcome to a lovely place, " + firstNameNewInput + ".");
+                    System.out.println("Creating your new reservation...");
 
-                     */
+                    String latestResID = null;
+                    String newResIDString = null;
+                    try {
+                        latestResID = fetchLatestID(1, connection);
 
-
+                        Long newResID = Long.parseLong(latestResID);
+                        newResID += 1;
+                        newResIDString = newResID.toString();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        System.out.println("An error occurred while accessing the Hotel California servers. We are sorry " +
+                                "for any inconvenience.");
+                        return;
+                    }
+                    float costRes = 0;
+                    try {
+                        costRes = createReservation(connection, customerNewIDString, hotel_id, newResIDString, room_type, start_date, end_date);
+                    } catch (Exception e) {
+                        System.out.println("There was an error while attempting to create your reservation. We are sorry" +
+                                "for any inconvenience.");
+                        return;
+                    }
+                    System.out.println("Success! Your reservation was created. You will be charged " +
+                            costRes + " at the time of check in. Or, you may opt to pay with points. Have a nice day.");
                 }
             } else {
                 scanner.nextLine();
@@ -348,8 +400,6 @@ public class Interfaces {
                     try {
                         latestID = fetchLatestID(1, connection);
 
-                        System.out.println("LATESTID: " + latestID);
-
                         Long newID = Long.parseLong(latestID);
                         newID += 1;
                         newIDString = newID.toString();
@@ -368,7 +418,7 @@ public class Interfaces {
                         return;
                     }
                     System.out.println("Success! Your reservation was created. You will be charged " +
-                            costRes + " at the time of check in. Have a nice day.");
+                            costRes + " at the time of check in. Or, you may opt to pay with points. Have a nice day.");
                 }
                 customerQuery.close();
             }
@@ -471,7 +521,7 @@ public class Interfaces {
                                 if (numberNights > 0) {
                                     isValidNights = true;
                                 } else {
-                                    System.out.println("Invalid input, remember you cannot stay at any Hotel California locations for more" +
+                                    System.out.println("Invalid input, remember you cannot stay at any Hotel California locations for more than " +
                                             "30 days with a single reservation.");
                                 }
                             }
@@ -601,10 +651,11 @@ public class Interfaces {
                                         } catch (Exception e) {
                                             System.out.println("An unexpected error has occurred while fetching rooms, we are sorry for the inconvenience.");
                                         }
-
-                                        validateUserCreateRes(scanner, connection, selectedHotelId, roomSelected, inputDate, inputDate.plusDays(numberNights));
                                     } else {
                                         System.out.println("Returning to customer menu...");
+                                    }
+                                    if (isValidRoom) {
+                                        validateUserCreateRes(scanner, connection, selectedHotelId, roomSelected, inputDate, inputDate.plusDays(numberNights));
                                     }
                                 }
                                 preparedRoomTypesExistsQuery.close();
