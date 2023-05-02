@@ -307,6 +307,7 @@ public class Interfaces {
                             points = -1;
                         } else {
                             System.out.println("Please only enter, 'Y' or 'N'. Try again.");
+                            scanner.nextLine();
                         }
                     }
 
