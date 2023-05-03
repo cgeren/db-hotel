@@ -450,6 +450,7 @@ public class Interfaces {
     }
 
     public static void frontDeskInterface(Scanner scanner, Connection connection) throws SQLException {
+        String customerId = "";
 
         String cityQuery = "SELECT city, state FROM hotel";
         Statement cityStatement = connection.createStatement();
@@ -505,6 +506,7 @@ public class Interfaces {
                 String lastNameInput = scanner.nextLine();
 
                 System.out.println("Enter customer's phone number: ");
+                long maxPhone = 9999999999L;
                 long phoneNumberInput = testValidLong(1000000000, maxPhone, scanner);
 
                 PreparedStatement customerQuery = null;
@@ -536,9 +538,9 @@ public class Interfaces {
         } else {
             System.out.println("Enter customer's room number:");
 
-            int roomNumInput = testValidInteger(100, 999);
+            int roomNumInput = testValidInteger(100, 999, scanner);
 
-            String preparedRoomReservationsString = "SELECT * FROM reservations WHERE h_id = ? and room_num = ? and end_date > ? and" +
+            String preparedRoomReservationsString = "SELECT * FROM reservations WHERE h_id = ? and room_num = ? and end_date > ?  +
                     "check_in is not null";
             PreparedStatement preparedRoomReservationsQuery = connection.prepareStatement(preparedRoomReservationsString);
 
@@ -548,16 +550,22 @@ public class Interfaces {
             ZoneId zone = ZoneId.of("America/Montreal");
             ZonedDateTime currentTime = ZonedDateTime.now(zone);
 
-            currentTime = currentTime.minusDays(30);
 
-            LocalDate currentDate = currentTime.toLocalDate();
+            ZonedDateTime minusTime = currentTime.minusDays(30);
 
-            preparedRoomReservationsQuery.setDate(3, java.sql.Date.valueOf(currentDate.toString()))
+            LocalDate minusDate = minusTime.toLocalDate();
 
-            ResultSet roomReservation = preparedRoomReservationsQuery.executeQuery();
+            preparedRoomReservationsQuery.setDate(3, java.sql.Date.valueOf(minusDate.toString()));
+
+            ResultSet roomReservation = null;
+            try {
+                roomReservation = preparedRoomReservationsQuery.executeQuery();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
             if (!roomReservation.next()) {
-                System.out.println("That room number does not exist within this hotel.");
+                System.out.println("There is not a valid outstanding reservation in that room within this hotel.");
             } else {
                 int counter = 1;
                 ArrayList<String> reservationIDs = new ArrayList<String>();
