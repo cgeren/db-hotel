@@ -479,7 +479,7 @@ public class Interfaces {
         String selectedHotelId = "";
 
         if (!hotelInCity.next()) {
-            System.out.println("You have entered an invalid city name. Try again, or press '2' for a list of locations.");
+            System.out.println("You have entered an invalid city name. Try again.");
         } else {
             int counter = 1;
             ArrayList<String> hotelIds = new ArrayList<String>();
@@ -505,266 +505,265 @@ public class Interfaces {
                     System.out.println("Not a valid input. Please try again.");
                 }
             }
-        }
 
-        System.out.println("1. Checking in\n2. Checking out");
-        int inOrOut = testValidInteger(1, 2, scanner);
+            System.out.println("1. Checking in\n2. Checking out");
+            int inOrOut = testValidInteger(1, 2, scanner);
 
-        if (inOrOut == 1) {
-            boolean isValidCustomer = false;
-            PreparedStatement customerQuery = null;
-            while (!isValidCustomer) {
-                scanner.nextLine();
-                System.out.println("Enter customer's last name: ");
-                String lastNameInput = scanner.nextLine();
+            if (inOrOut == 1) {
+                boolean isValidCustomer = false;
+                PreparedStatement customerQuery = null;
+                while (!isValidCustomer) {
+                    scanner.nextLine();
+                    System.out.println("Enter customer's last name: ");
+                    String lastNameInput = scanner.nextLine();
 
-                System.out.println("Enter customer's phone number: ");
-                long maxPhone = 9999999999L;
-                long phoneNumberInput = testValidLong(1000000000, maxPhone, scanner);
+                    System.out.println("Enter customer's phone number: ");
+                    long maxPhone = 9999999999L;
+                    long phoneNumberInput = testValidLong(1000000000, maxPhone, scanner);
 
-                String preparedCustomer = null;
-                ResultSet customerResult = null;
+                    String preparedCustomer = null;
+                    ResultSet customerResult = null;
 
-                try {
-                    preparedCustomer = "SELECT c_id, first_name, last_name FROM customer WHERE last_name = ? and phone = ?";
-                    customerQuery = connection.prepareStatement(preparedCustomer);
-
-                    customerQuery.setString(1, lastNameInput);
-                    customerQuery.setLong(2, phoneNumberInput);
-
-                    customerResult = customerQuery.executeQuery();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-                if (!customerResult.next()) {
-                    System.out.println("A customer with that last name and phone number does not exist.");
-                } else {
-                    System.out.println("Customer found:");
-                    do {
-                        System.out.println(customerResult.getString("first_name") + " " + customerResult.getString("last_name"));
-                        customerId = customerResult.getString("c_id");
-                    } while (customerResult.next());
-                    isValidCustomer = true;
-                }
-            }
-
-            ZoneId zone = ZoneId.of("America/Montreal");
-            ZonedDateTime currentTime = ZonedDateTime.now(zone);
-
-            LocalDate currentDate = currentTime.toLocalDate();
-
-            String reservationQueryString = "SELECT r_id, room_num, cost FROM reservations WHERE c_id = ? AND start_date <= ? AND end_date > ?";
-            PreparedStatement reservationQuery = connection.prepareStatement(reservationQueryString);
-
-            reservationQuery.setString(1, customerId);
-            reservationQuery.setDate(2, java.sql.Date.valueOf(currentDate.toString()));
-            reservationQuery.setDate(3, java.sql.Date.valueOf(currentDate.toString()));
-
-            int roomNumber = 0;
-            float cost = 0;
-            int costPoints = 0;
-            ResultSet reservationResult = null;
-            try {
-                reservationResult = reservationQuery.executeQuery();
-            } catch (Exception e) {
-                System.out.println("Something went wrong fetching the customer's reservation.");
-                return;
-            }
-
-            String reservationID = "";
-
-            if (!reservationResult.next()) {
-                System.out.println("Customer has no valid reservations for check-in.");
-            } else {
-                do {
-                    System.out.println("Found reservation!");
-                    reservationID = reservationResult.getString("r_id");
-                    roomNumber = reservationResult.getInt("room_num");
-                    cost = reservationResult.getFloat("cost");
-                } while (reservationResult.next());
-
-                String getPointsString = "SELECT costs_points( ? , ? ) AS points FROM dual";
-                PreparedStatement getPointsQuery = connection.prepareStatement(getPointsString);
-                getPointsQuery.setString(1, selectedHotelId);
-                getPointsQuery.setInt(2, roomNumber);
-
-                ResultSet pointsResult = null;
-                try {
-                    pointsResult = getPointsQuery.executeQuery();
-                    if (!pointsResult.next()) {
-                        System.out.println("This room has no point payment option.");
-                    } else {
-                        do {
-                            costPoints = pointsResult.getInt("points");
-                        } while (pointsResult.next());
-                    }
-                } catch (Exception e) {
-                    System.out.println("Something went wrong fetching point data from the server.");
-                }
-
-                System.out.println("Does the customer want to pay with cash or points?\n1. Cash\n2. Points");
-
-                boolean hasPayment = false;
-
-                CallableStatement createTransaction = null;
-                while (!hasPayment) {
-                    String txNewIDString = null;
                     try {
-                        String txOldIDString = fetchLatestID(3, connection);
-                        Long newTxID = Long.parseLong(txOldIDString);
-                        newTxID += 1;
-                        txNewIDString = newTxID.toString();
+                        preparedCustomer = "SELECT c_id, first_name, last_name FROM customer WHERE last_name = ? and phone = ?";
+                        customerQuery = connection.prepareStatement(preparedCustomer);
+
+                        customerQuery.setString(1, lastNameInput);
+                        customerQuery.setLong(2, phoneNumberInput);
+
+                        customerResult = customerQuery.executeQuery();
                     } catch (Exception e) {
-                        System.out.println("Something went wrong while fetching data from the Hotel California servers.");
+                        e.printStackTrace();
+                    }
+
+                    if (!customerResult.next()) {
+                        System.out.println("A customer with that last name and phone number does not exist.");
+                    } else {
+                        System.out.println("Customer found:");
+                        do {
+                            System.out.println(customerResult.getString("first_name") + " " + customerResult.getString("last_name"));
+                            customerId = customerResult.getString("c_id");
+                        } while (customerResult.next());
+                        isValidCustomer = true;
+                    }
+                }
+
+                ZoneId zone = ZoneId.of("America/Montreal");
+                ZonedDateTime currentTime = ZonedDateTime.now(zone);
+
+                LocalDate currentDate = currentTime.toLocalDate();
+
+                String reservationQueryString = "SELECT r_id, room_num, cost FROM reservations WHERE c_id = ? AND start_date <= ? AND end_date > ?";
+                PreparedStatement reservationQuery = connection.prepareStatement(reservationQueryString);
+
+                reservationQuery.setString(1, customerId);
+                reservationQuery.setDate(2, java.sql.Date.valueOf(currentDate.toString()));
+                reservationQuery.setDate(3, java.sql.Date.valueOf(currentDate.toString()));
+
+                int roomNumber = 0;
+                float cost = 0;
+                int costPoints = 0;
+                ResultSet reservationResult = null;
+                try {
+                    reservationResult = reservationQuery.executeQuery();
+                } catch (Exception e) {
+                    System.out.println("Something went wrong fetching the customer's reservation.");
+                    return;
+                }
+
+                String reservationID = "";
+
+                if (!reservationResult.next()) {
+                    System.out.println("Customer has no valid reservations for check-in.");
+                } else {
+                    do {
+                        System.out.println("Found reservation!");
+                        reservationID = reservationResult.getString("r_id");
+                        roomNumber = reservationResult.getInt("room_num");
+                        cost = reservationResult.getFloat("cost");
+                    } while (reservationResult.next());
+
+                    String getPointsString = "SELECT costs_points( ? , ? ) AS points FROM dual";
+                    PreparedStatement getPointsQuery = connection.prepareStatement(getPointsString);
+                    getPointsQuery.setString(1, selectedHotelId);
+                    getPointsQuery.setInt(2, roomNumber);
+
+                    ResultSet pointsResult = null;
+                    try {
+                        pointsResult = getPointsQuery.executeQuery();
+                        if (!pointsResult.next()) {
+                            System.out.println("This room has no point payment option.");
+                        } else {
+                            do {
+                                costPoints = pointsResult.getInt("points");
+                            } while (pointsResult.next());
+                        }
+                    } catch (Exception e) {
+                        System.out.println("Something went wrong fetching point data from the server.");
+                    }
+
+                    System.out.println("Does the customer want to pay with cash or points?\n1. Cash\n2. Points");
+
+                    boolean hasPayment = false;
+
+                    CallableStatement createTransaction = null;
+                    while (!hasPayment) {
+                        String txNewIDString = null;
+                        try {
+                            String txOldIDString = fetchLatestID(3, connection);
+                            Long newTxID = Long.parseLong(txOldIDString);
+                            newTxID += 1;
+                            txNewIDString = newTxID.toString();
+                        } catch (Exception e) {
+                            System.out.println("Something went wrong while fetching data from the Hotel California servers.");
+                            return;
+                        }
+
+                        int paymentOption = testValidInteger(1, 2, scanner);
+
+                        ZonedDateTime currentTxTime = ZonedDateTime.now(zone);
+                        LocalDateTime currentTxTimeLocal = currentTxTime.toLocalDateTime();
+                        Timestamp timestampTxTime = Timestamp.valueOf(currentTxTimeLocal);
+
+                        createTransaction = connection.prepareCall("{? , ? , ? , ?, ?}");
+                        createTransaction.setString(1, txNewIDString);
+                        createTransaction.setString(2, reservationID);
+                        createTransaction.setTimestamp(3, timestampTxTime);
+
+                        if (paymentOption == 1) {
+                            createTransaction.setFloat(4, cost);
+                            createTransaction.setInt(5, 0);
+                        } else {
+                            String preparedCheckPointsString = "SELECT points FROM customer WHERE c_id = ?";
+                            PreparedStatement preparedCheckPointsQuery = connection.prepareStatement(preparedCheckPointsString);
+                            preparedCheckPointsQuery.setString(1, customerId);
+
+                            ResultSet hasPointsResult = null;
+                            int numberPoints = -1;
+                            try {
+                                hasPointsResult = preparedCheckPointsQuery.executeQuery();
+                                if (!hasPointsResult.next()) {
+                                    System.out.println("User does not have points.");
+                                } else {
+                                    do {
+                                        numberPoints = hasPointsResult.getInt("points");
+                                    } while (hasPointsResult.next());
+                                    if (numberPoints >= costPoints) {
+                                        hasPayment = true;
+                                    }
+                                }
+                            } catch (Exception e) {
+                                System.out.println("Whoopsie doodle I'm off my noodle.");
+                            }
+                            createTransaction.setFloat(4, 0);
+                            createTransaction.setInt(5, costPoints);
+                            hasPayment = true;
+                        }
+                    }
+
+                    try {
+                        createTransaction.execute();
+
+                        System.out.println("Transaction executed! Customer points have been updated accordingly.");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        System.out.println("An error occurred while processing the transaction.");
                         return;
                     }
 
-                    int paymentOption = testValidInteger(1, 2, scanner);
+                    LocalDateTime currentTimeLocal = currentTime.toLocalDateTime();
+                    Timestamp timestampTime = Timestamp.valueOf(currentTimeLocal);
 
-                    ZonedDateTime currentTxTime = ZonedDateTime.now(zone);
-                    LocalDateTime currentTxTimeLocal = currentTxTime.toLocalDateTime();
-                    Timestamp timestampTxTime = Timestamp.valueOf(currentTxTimeLocal);
+                    CallableStatement updateCheckIn = connection.prepareCall("{call setCheckIn(?, ?)}");
+                    updateCheckIn.setString(1, reservationID);
+                    updateCheckIn.setTimestamp(2, timestampTime);
 
-                    createTransaction = connection.prepareCall("{? , ? , ? , ?, ?}");
-                    createTransaction.setString(1, txNewIDString);
-                    createTransaction.setString(2, reservationID);
-                    createTransaction.setTimestamp(3, timestampTxTime);
-
-                    if (paymentOption == 1) {
-                        createTransaction.setFloat(4, cost);
-                        createTransaction.setInt(5, 0);
-                    } else {
-                        String preparedCheckPointsString = "SELECT points FROM customer WHERE c_id = ?";
-                        PreparedStatement preparedCheckPointsQuery = connection.prepareStatement(preparedCheckPointsString);
-                        preparedCheckPointsQuery.setString(1, customerId);
-
-                        ResultSet hasPointsResult = null;
-                        int numberPoints = -1;
-                        try {
-                            hasPointsResult = preparedCheckPointsQuery.executeQuery();
-                            if (!hasPointsResult.next()) {
-                                System.out.println("User does not have points.");
-                            } else {
-                                do {
-                                    numberPoints = hasPointsResult.getInt("points");
-                                } while (hasPointsResult.next());
-                                if (numberPoints >= costPoints) {
-                                    hasPayment = true;
-                                }
-                            }
-                        } catch (Exception e) {
-                            System.out.println("Whoopsie doodle I'm off my noodle.");
-                        }
-                        createTransaction.setFloat(4, 0);
-                        createTransaction.setInt(5, costPoints);
-                        hasPayment = true;
+                    try {
+                        updateCheckIn.execute();
+                    } catch (Exception e) {
+                        System.out.println("There was an issue updating check-in.");
+                        return;
                     }
+
+                    System.out.println("Customer checked-in succesfully to room " + roomNumber + "!");
                 }
+                customerQuery.close();
+            } else {
+                System.out.println("Enter customer's room number:");
 
+                int roomNumInput = testValidInteger(100, 999, scanner);
+
+                String preparedRoomReservationsString = "SELECT * FROM reservations WHERE h_id = ? and room_num = ? and end_date > ? and "  +
+                        "check_in is not null";
+                PreparedStatement preparedRoomReservationsQuery = connection.prepareStatement(preparedRoomReservationsString);
+
+                preparedRoomReservationsQuery.setString(1, selectedHotelId);
+                preparedRoomReservationsQuery.setInt(2, roomNumInput);
+
+                ZoneId zone = ZoneId.of("America/Montreal");
+                ZonedDateTime currentTime = ZonedDateTime.now(zone);
+
+                ZonedDateTime minusTime = currentTime.minusDays(30);
+
+                LocalDate minusDate = minusTime.toLocalDate();
+
+                preparedRoomReservationsQuery.setDate(3, java.sql.Date.valueOf(minusDate.toString()));
+
+                ResultSet roomReservation = null;
                 try {
-                    createTransaction.execute();
-
-                    System.out.println("Transaction executed! Customer points have been updated accordingly.");
+                    roomReservation = preparedRoomReservationsQuery.executeQuery();
                 } catch (Exception e) {
                     e.printStackTrace();
-                    System.out.println("An error occurred while processing the transaction.");
-                    return;
                 }
 
-                LocalDateTime currentTimeLocal = currentTime.toLocalDateTime();
-                Timestamp timestampTime = Timestamp.valueOf(currentTimeLocal);
+                if (!roomReservation.next()) {
+                    System.out.println("There is not a valid outstanding reservation in that room within this hotel.");
+                } else {
+                    int innerCounter = 1;
+                    ArrayList<String> reservationIDs = new ArrayList<String>();
+                    System.out.println("The following reservations within this hotel have end dates within 30 days of the current day:\n" +
+                            "Please verify with the customer which reservation is correct through their corresponding start date.");
+                    do {
+                        System.out.println(innerCounter + ".\t" + roomReservation.getDate("start_date").toString());
+                        reservationIDs.add(roomReservation.getString("r_id"));
+                        innerCounter++;
+                    } while (roomReservation.next());
+                    System.out.println("\nPress the number associated with the proper start date.");
 
-                CallableStatement updateCheckIn = connection.prepareCall("{call setCheckIn(?, ?)}");
-                updateCheckIn.setString(1, reservationID);
-                updateCheckIn.setTimestamp(2, timestampTime);
+                    boolean isValidReservation = false;
+                    String selectedReservationID = "";
+                    while (!isValidReservation) {
+                        int reserverationSelection = testValidInteger(1, innerCounter - 1, scanner);
 
-                try {
-                    updateCheckIn.execute();
-                } catch (Exception e) {
-                    System.out.println("There was an issue updating check-in.");
-                    return;
-                }
-
-                System.out.println("Customer checked-in succesfully to room " + roomNumber + "!");
-            }
-            customerQuery.close();
-        } else {
-            System.out.println("Enter customer's room number:");
-
-            int roomNumInput = testValidInteger(100, 999, scanner);
-
-            String preparedRoomReservationsString = "SELECT * FROM reservations WHERE h_id = ? and room_num = ? and end_date > ? and "  +
-                    "check_in is not null";
-            PreparedStatement preparedRoomReservationsQuery = connection.prepareStatement(preparedRoomReservationsString);
-
-            preparedRoomReservationsQuery.setString(1, selectedHotelId);
-            preparedRoomReservationsQuery.setInt(2, roomNumInput);
-
-            ZoneId zone = ZoneId.of("America/Montreal");
-            ZonedDateTime currentTime = ZonedDateTime.now(zone);
-
-            ZonedDateTime minusTime = currentTime.minusDays(30);
-
-            LocalDate minusDate = minusTime.toLocalDate();
-
-            preparedRoomReservationsQuery.setDate(3, java.sql.Date.valueOf(minusDate.toString()));
-
-            ResultSet roomReservation = null;
-            try {
-                roomReservation = preparedRoomReservationsQuery.executeQuery();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            if (!roomReservation.next()) {
-                System.out.println("There is not a valid outstanding reservation in that room within this hotel.");
-            } else {
-                int counter = 1;
-                ArrayList<String> reservationIDs = new ArrayList<String>();
-                System.out.println("The following reservations within this hotel have end dates within 30 days of the current day:\n" +
-                        "Please verify with the customer which reservation is correct through their corresponding start date.");
-                do {
-                    System.out.println(counter + ".\t" + roomReservation.getDate("start_date").toString());
-                    reservationIDs.add(roomReservation.getString("r_id"));
-                    counter++;
-                } while (roomReservation.next());
-                System.out.println("\nPress the number associated with the proper start date.");
-
-                boolean isValidReservation = false;
-                String selectedReservationID = "";
-                while (!isValidReservation) {
-                    int reserverationSelection = testValidInteger(1, counter - 1, scanner);
-
-                    if (reserverationSelection > 0) {
-                        isValidReservation = true;
-                        selectedReservationID = reservationIDs.get(reserverationSelection - 1);
-                    } else {
-                        System.out.println("Not a valid input. Please try again.");
+                        if (reserverationSelection > 0) {
+                            isValidReservation = true;
+                            selectedReservationID = reservationIDs.get(reserverationSelection - 1);
+                        } else {
+                            System.out.println("Not a valid input. Please try again.");
+                        }
                     }
+
+                    System.out.println("Successfully fetched reservation info.");
+
+                    CallableStatement updateCheckOut = connection.prepareCall("{call setCheckOut(?, ?)}");
+                    updateCheckOut.setString(1, selectedReservationID);
+
+                    LocalDateTime currentTimeLocal = currentTime.toLocalDateTime();
+                    Timestamp timestampTime = Timestamp.valueOf(currentTimeLocal);
+                    updateCheckOut.setTimestamp(2, timestampTime);
+
+                    try {
+                        updateCheckOut.execute();
+                        System.out.println("Successfully updated check out.");
+                    } catch (Exception e) {
+                        System.out.println("Whoopsie!sss");
+                        return;
+                    }
+
                 }
-
-                System.out.println("Successfully fetched reservation info.");
-
-                CallableStatement updateCheckOut = connection.prepareCall("{call setCheckOut(?, ?)}");
-                updateCheckOut.setString(1, selectedReservationID);
-
-                LocalDateTime currentTimeLocal = currentTime.toLocalDateTime();
-                Timestamp timestampTime = Timestamp.valueOf(currentTimeLocal);
-                updateCheckOut.setTimestamp(2, timestampTime);
-
-                try {
-                    updateCheckOut.execute();
-                    System.out.println("Successfully updated check out.");
-                } catch (Exception e) {
-                    System.out.println("Whoopsie!sss");
-                    return;
-                }
-
+                preparedRoomReservationsQuery.close();
             }
-            preparedRoomReservationsQuery.close();
         }
-
     }
 
     public static void housekeepingInterface(Scanner scanner, Connection connection) throws SQLException {
