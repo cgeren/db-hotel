@@ -292,99 +292,107 @@ public class Interfaces {
                 System.out.println("Last name: ");
                 String lastNameNewInput = scanner.nextLine();
                 System.out.println("Phone number: ");
-                long phoneInputNew = testValidLong(1000000000, maxPhone, scanner);
 
-                String checkPhoneExists = "SELECT COUNT(phone) as NUMPHONES\n" +
-                        "FROM customer\n" +
-                        "WHERE phone = ?";
-                PreparedStatement phoneExistsQuery = connection.prepareStatement(checkPhoneExists);
-                phoneExistsQuery.setLong(1, phoneInputNew);
-                ResultSet phoneExistsResult = phoneExistsQuery.executeQuery();
-                int numPhonesSame = 0;
+                long phoneInputNew = testValidLong(1000000000L, maxPhone, scanner);
 
-                if (!phoneExistsResult.next()) {
-                    System.out.println("An error occurred fetching data from the server.");
+                if (phoneInputNew == 0) {
+                    System.out.println("Phone number input incorrect, ensure it is 10 digits.");
                 } else {
-                    do {
-                        numPhonesSame = phoneExistsResult.getInt("NUMPHONES");
-                    } while (phoneExistsResult.next());
-                }
+                    String checkPhoneExists = "SELECT COUNT(phone) as NUMPHONES\n" +
+                            "FROM customer\n" +
+                            "WHERE phone = ?";
+                    PreparedStatement phoneExistsQuery = connection.prepareStatement(checkPhoneExists);
+                    phoneExistsQuery.setLong(1, phoneInputNew);
+                    ResultSet phoneExistsResult = phoneExistsQuery.executeQuery();
+                    int numPhonesSame = 0;
 
-                if (numPhonesSame > 0) {
-                    System.out.println("A user with that phone number already exists.");
-                } else {
-                    isValidUser = true;
-                    System.out.println("Would you like to sign up for our frequent stayer program? Y/N");
-                    String frequentInput = "";
-                    int points = 0;
-                    boolean isValidResult = false;
-                    while (!isValidResult) {
+                    if (!phoneExistsResult.next()) {
+                        System.out.println("An error occurred fetching data from the server.");
+                    } else {
+                        do {
+                            numPhonesSame = phoneExistsResult.getInt("NUMPHONES");
+                        } while (phoneExistsResult.next());
+                    }
+
+                    if (numPhonesSame > 0) {
+                        System.out.println("A user with that phone number already exists.");
+                    } else {
+                        isValidUser = true;
+                        System.out.println("Would you like to sign up for our frequent stayer program? Y/N");
+                        String frequentInput = "";
+                        int points = 0;
+                        boolean isValidResult = false;
                         scanner.nextLine();
-                        frequentInput = scanner.nextLine();
-                        if (frequentInput.equals("Y")) {
-                            System.out.println("Wonderful! You have a balance of 0 points. You gain points when you pay for" +
-                                    "\nreservations, our current point rate is 1 point for every 10 dollars you spend!");
-                            isValidResult = true;
-                        } else if (frequentInput.equals("N")) {
-                            System.out.println("We hope you will change your mind in the future :) It is free money.");
-                            isValidResult = true;
-                            points = -1;
+                        while (!isValidResult) {
+                            frequentInput = scanner.nextLine();
+                            if (frequentInput.equals("Y")) {
+                                System.out.println("Wonderful! You have a balance of 0 points. You gain points when you pay for" +
+                                        "\nreservations, our current point rate is 1 point for every 10 dollars you spend!");
+                                isValidResult = true;
+                            } else if (frequentInput.equals("N")) {
+                                System.out.println("We hope you will change your mind in the future :) It is free money.");
+                                isValidResult = true;
+                                points = -1;
+                            } else {
+                                System.out.println("Please only enter, 'Y' or 'N'. Try again.");
+                            }
+                        }
+
+                        System.out.println("\nPlease enter your 16-digit credit card number.");
+
+                        long cc_number = testValidLong(100000000000000L, 9999999999999999L, scanner);
+
+                        if (cc_number == 0) {
+                            System.out.println("CC Number input incorrect. Ensure it was entered correctly.");
                         } else {
-                            System.out.println("Please only enter, 'Y' or 'N'. Try again.");
-                            scanner.nextLine();
+                            String customerNewIDString = null;
+                            try {
+                                String latestCustomerID = fetchLatestID(2, connection);
+                                Long newCustomerID = Long.parseLong(latestCustomerID);
+                                newCustomerID += 1;
+                                customerNewIDString = newCustomerID.toString();
+                            } catch (Exception e) {
+                                System.out.println("Something went wrong while fetching from the Hotel California servers.");
+                                return;
+                            }
+
+                            try {
+                                createCustomer(connection, customerNewIDString, firstNameNewInput, lastNameNewInput, phoneInputNew, points, cc_number);
+                            } catch (Exception e) {
+                                System.out.println("Something went wrong while initializing your new customer profile. You may have entered duplicate input.\n" +
+                                        "We apologize for the inconvenience.");
+                                return;
+                            }
+                            System.out.println("New customer profile created successfully! Welcome to a lovely place, " + firstNameNewInput + ".");
+                            System.out.println("Creating your new reservation...");
+
+                            String latestResID = null;
+                            String newResIDString = null;
+                            try {
+                                latestResID = fetchLatestID(1, connection);
+
+                                Long newResID = Long.parseLong(latestResID);
+                                newResID += 1;
+                                newResIDString = newResID.toString();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                System.out.println("An error occurred while accessing the Hotel California servers. We are sorry " +
+                                        "for any inconvenience.");
+                                return;
+                            }
+                            float costRes = 0;
+                            try {
+                                costRes = createReservation(connection, customerNewIDString, hotel_id, newResIDString, room_type, start_date, end_date);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                System.out.println("There was an error while attempting to create your reservation. We are sorry " +
+                                        "for any inconvenience.");
+                                return;
+                            }
+                            System.out.println("Success! Your reservation was created. You will be charged " +
+                                    costRes + " at the time of check in. Or, you may opt to pay with points. Have a nice day.");
                         }
                     }
-
-                    System.out.println("\nPlease enter your 16-digit credit card number.");
-
-                    long cc_number = testValidLong(100000000000000L, 9999999999999999L, scanner);
-
-                    String customerNewIDString = null;
-                    try {
-                        String latestCustomerID = fetchLatestID(2, connection);
-                        Long newCustomerID = Long.parseLong(latestCustomerID);
-                        newCustomerID += 1;
-                        customerNewIDString = newCustomerID.toString();
-                    } catch (Exception e) {
-                        System.out.println("Something went wrong while fetching from the Hotel California servers.");
-                        return;
-                    }
-
-                    try {
-                        createCustomer(connection, customerNewIDString, firstNameNewInput, lastNameNewInput, phoneInputNew, points, cc_number);
-                    } catch (Exception e) {
-                        System.out.println("Something went wrong while initializing your new customer profile. You may have entered duplicate input.\n" +
-                                "We apologize for the inconvenience.");
-                        return;
-                    }
-                    System.out.println("New customer profile created successfully! Welcome to a lovely place, " + firstNameNewInput + ".");
-                    System.out.println("Creating your new reservation...");
-
-                    String latestResID = null;
-                    String newResIDString = null;
-                    try {
-                        latestResID = fetchLatestID(1, connection);
-
-                        Long newResID = Long.parseLong(latestResID);
-                        newResID += 1;
-                        newResIDString = newResID.toString();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        System.out.println("An error occurred while accessing the Hotel California servers. We are sorry " +
-                                "for any inconvenience.");
-                        return;
-                    }
-                    float costRes = 0;
-                    try {
-                        costRes = createReservation(connection, customerNewIDString, hotel_id, newResIDString, room_type, start_date, end_date);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        System.out.println("There was an error while attempting to create your reservation. We are sorry " +
-                                "for any inconvenience.");
-                        return;
-                    }
-                    System.out.println("Success! Your reservation was created. You will be charged " +
-                            costRes + " at the time of check in. Or, you may opt to pay with points. Have a nice day.");
                 }
             } else {
                 scanner.nextLine();
@@ -546,13 +554,16 @@ public class Interfaces {
 
             LocalDate currentDate = currentTime.toLocalDate();
 
-            String reservationQueryString = "SELECT r_id FROM reservations WHERE c_id = ? AND start_date <= ? AND end_date > ?";
+            String reservationQueryString = "SELECT r_id, room_num, cost FROM reservations WHERE c_id = ? AND start_date <= ? AND end_date > ?";
             PreparedStatement reservationQuery = connection.prepareStatement(reservationQueryString);
 
             reservationQuery.setString(1, customerId);
             reservationQuery.setDate(2, java.sql.Date.valueOf(currentDate.toString()));
             reservationQuery.setDate(3, java.sql.Date.valueOf(currentDate.toString()));
 
+            int roomNumber = 0;
+            float cost = 0;
+            int costPoints = 0;
             ResultSet reservationResult = null;
             try {
                 reservationResult = reservationQuery.executeQuery();
@@ -569,7 +580,97 @@ public class Interfaces {
                 do {
                     System.out.println("Found reservation!");
                     reservationID = reservationResult.getString("r_id");
+                    roomNumber = reservationResult.getInt("room_num");
+                    cost = reservationResult.getFloat("cost");
                 } while (reservationResult.next());
+
+                String getPointsString = "SELECT costs_points( ? , ? ) AS points FROM dual";
+                PreparedStatement getPointsQuery = connection.prepareStatement(getPointsString);
+                getPointsQuery.setString(1, selectedHotelId);
+                getPointsQuery.setInt(2, roomNumber);
+
+                ResultSet pointsResult = null;
+                try {
+                    pointsResult = getPointsQuery.executeQuery();
+                    if (!pointsResult.next()) {
+                        System.out.println("This room has no point payment option.");
+                    } else {
+                        do {
+                            costPoints = pointsResult.getInt("points");
+                        } while (pointsResult.next());
+                    }
+                } catch (Exception e) {
+                    System.out.println("Something went wrong fetching point data from the server.");
+                }
+
+                System.out.println("Does the customer want to pay with cash or points?\n1. Cash\n2. Points");
+
+                boolean hasPayment = false;
+
+                CallableStatement createTransaction = null;
+                while (!hasPayment) {
+                    String txNewIDString = null;
+                    try {
+                        String txOldIDString = fetchLatestID(3, connection);
+                        Long newTxID = Long.parseLong(txOldIDString);
+                        newTxID += 1;
+                        txNewIDString = newTxID.toString();
+                    } catch (Exception e) {
+                        System.out.println("Something went wrong while fetching data from the Hotel California servers.");
+                        return;
+                    }
+
+                    int paymentOption = testValidInteger(1, 2, scanner);
+
+                    ZonedDateTime currentTxTime = ZonedDateTime.now(zone);
+                    LocalDateTime currentTxTimeLocal = currentTxTime.toLocalDateTime();
+                    Timestamp timestampTxTime = Timestamp.valueOf(currentTxTimeLocal);
+
+                    createTransaction = connection.prepareCall("{? , ? , ? , ?, ?}");
+                    createTransaction.setString(1, txNewIDString);
+                    createTransaction.setString(2, reservationID);
+                    createTransaction.setTimestamp(3, timestampTxTime);
+
+                    if (paymentOption == 1) {
+                        createTransaction.setFloat(4, cost);
+                        createTransaction.setInt(5, 0);
+                    } else {
+                        String preparedCheckPointsString = "SELECT points FROM customer WHERE c_id = ?";
+                        PreparedStatement preparedCheckPointsQuery = connection.prepareStatement(preparedCheckPointsString);
+                        preparedCheckPointsQuery.setString(1, customerId);
+
+                        ResultSet hasPointsResult = null;
+                        int numberPoints = -1;
+                        try {
+                            hasPointsResult = preparedCheckPointsQuery.executeQuery();
+                            if (!hasPointsResult.next()) {
+                                System.out.println("User does not have points.");
+                            } else {
+                                do {
+                                    numberPoints = hasPointsResult.getInt("points");
+                                } while (hasPointsResult.next());
+                                if (numberPoints >= costPoints) {
+                                    hasPayment = true;
+                                }
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Whoopsie doodle I'm off my noodle.");
+                        }
+                        createTransaction.setFloat(4, 0);
+                        createTransaction.setInt(5, costPoints);
+                        hasPayment = true;
+                    }
+                }
+
+                try {
+                    createTransaction.execute();
+
+                    System.out.println("Transaction executed! Customer points have been updated accordingly.");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.println("An error occurred while processing the transaction.");
+                    return;
+                }
 
                 LocalDateTime currentTimeLocal = currentTime.toLocalDateTime();
                 Timestamp timestampTime = Timestamp.valueOf(currentTimeLocal);
@@ -585,7 +686,7 @@ public class Interfaces {
                     return;
                 }
 
-                System.out.println("Customer checked-in succesfully!");
+                System.out.println("Customer checked-in succesfully to room " + roomNumber + "!");
             }
             customerQuery.close();
         } else {
@@ -602,7 +703,6 @@ public class Interfaces {
 
             ZoneId zone = ZoneId.of("America/Montreal");
             ZonedDateTime currentTime = ZonedDateTime.now(zone);
-
 
             ZonedDateTime minusTime = currentTime.minusDays(30);
 
@@ -878,8 +978,8 @@ public class Interfaces {
                             String continueInput = "";
                             boolean isValidContinue = false;
                             boolean isMainMenu = false;
+                            scanner.nextLine();
                             while (!isValidContinue) {
-                                scanner.nextLine();
                                 continueInput = scanner.nextLine();
                                 if (continueInput.equals("Y")) {
                                     isValidContinue = true;
@@ -986,7 +1086,7 @@ public class Interfaces {
                                             do {
                                                 int roomResultInteger = Integer.parseInt(roomResult.getString("result"));
                                                 if (roomResultInteger == 0) {
-                                                    System.out.println("We are sorry. There are no available rooms of that type in your hotel. Returning to room type selection...");
+                                                    System.out.println("We are sorry. All rooms of that type are currently reserved. Returning to room type selection...");
                                                     isValidRoom = false;
                                                 } else {
                                                     System.out.println("There is an available room of that type in this hotel. Continuing to user information...");
