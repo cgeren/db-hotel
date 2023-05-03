@@ -9,8 +9,6 @@ import java.time.*;
 import java.util.Date;
 
 public class Interfaces {
-    private String roomTypeGlobal = "";
-
     public static void main(String[] args)
             throws SQLException, IOException, java.lang.ClassNotFoundException {
         System.out.println("Login to the Hotel California Database:");
@@ -263,6 +261,11 @@ public class Interfaces {
             } while (costResult.next());
         }
 
+        /**
+         * Because of my schema, room numbers must be assigned upon creation of the reservation.
+         * However, I know I am not overloading rooms or double booking rooms because of various
+         * checks and triggers within my relational design.
+         */
         CallableStatement updateRoomNum = connection.prepareCall("{call updateRoomNum(?, ?, ?, ?)}");
         updateRoomNum.setString(1, room_type);
         updateRoomNum.setString(2, reservationID);
@@ -501,7 +504,9 @@ public class Interfaces {
 
         if (inOrOut == 1) {
             boolean isValidCustomer = false;
+            PreparedStatement customerQuery = null;
             while (!isValidCustomer) {
+                scanner.nextLine();
                 System.out.println("Enter customer's last name: ");
                 String lastNameInput = scanner.nextLine();
 
@@ -509,12 +514,11 @@ public class Interfaces {
                 long maxPhone = 9999999999L;
                 long phoneNumberInput = testValidLong(1000000000, maxPhone, scanner);
 
-                PreparedStatement customerQuery = null;
                 String preparedCustomer = null;
                 ResultSet customerResult = null;
 
                 try {
-                    preparedCustomer = "SELECT c_id, first_name FROM customer WHERE last_name = ? and phone = ?";
+                    preparedCustomer = "SELECT c_id, first_name, last_name FROM customer WHERE last_name = ? and phone = ?";
                     customerQuery = connection.prepareStatement(preparedCustomer);
 
                     customerQuery.setString(1, lastNameInput);
@@ -533,14 +537,63 @@ public class Interfaces {
                         System.out.println(customerResult.getString("first_name") + " " + customerResult.getString("last_name"));
                         customerId = customerResult.getString("c_id");
                     } while (customerResult.next());
+                    isValidCustomer = true;
                 }
             }
+
+            ZoneId zone = ZoneId.of("America/Montreal");
+            ZonedDateTime currentTime = ZonedDateTime.now(zone);
+
+            LocalDate currentDate = currentTime.toLocalDate();
+
+            String reservationQueryString = "SELECT r_id FROM reservations WHERE c_id = ? AND start_date <= ? AND end_date > ?";
+            PreparedStatement reservationQuery = connection.prepareStatement(reservationQueryString);
+
+            reservationQuery.setString(1, customerId);
+            reservationQuery.setDate(2, java.sql.Date.valueOf(currentDate.toString()));
+            reservationQuery.setDate(3, java.sql.Date.valueOf(currentDate.toString()));
+
+            ResultSet reservationResult = null;
+            try {
+                reservationResult = reservationQuery.executeQuery();
+            } catch (Exception e) {
+                System.out.println("Something went wrong fetching the customer's reservation.");
+                return;
+            }
+
+            String reservationID = "";
+
+            if (!reservationResult.next()) {
+                System.out.println("Customer has no valid reservations for check-in.");
+            } else {
+                do {
+                    System.out.println("Found reservation!");
+                    reservationID = reservationResult.getString("r_id");
+                } while (reservationResult.next());
+
+                LocalDateTime currentTimeLocal = currentTime.toLocalDateTime();
+                Timestamp timestampTime = Timestamp.valueOf(currentTimeLocal);
+
+                CallableStatement updateCheckIn = connection.prepareCall("{call setCheckIn(?, ?)}");
+                updateCheckIn.setString(1, reservationID);
+                updateCheckIn.setTimestamp(2, timestampTime);
+
+                try {
+                    updateCheckIn.execute();
+                } catch (Exception e) {
+                    System.out.println("There was an issue updating check-in.");
+                    return;
+                }
+
+                System.out.println("Customer checked-in succesfully!");
+            }
+            customerQuery.close();
         } else {
             System.out.println("Enter customer's room number:");
 
             int roomNumInput = testValidInteger(100, 999, scanner);
 
-            String preparedRoomReservationsString = "SELECT * FROM reservations WHERE h_id = ? and room_num = ? and end_date > ?  +
+            String preparedRoomReservationsString = "SELECT * FROM reservations WHERE h_id = ? and room_num = ? and end_date > ? and "  +
                     "check_in is not null";
             PreparedStatement preparedRoomReservationsQuery = connection.prepareStatement(preparedRoomReservationsString);
 
@@ -692,7 +745,7 @@ public class Interfaces {
             while (moreCleaned) {
                 housekeepingInput = testValidInteger(1, 999, scanner);
 
-                if (housekeepingInput > 1) { System.out.println("An unexpected error has occurred. Returning to main menu...");
+                if (housekeepingInput > 1) {
                     CallableStatement setCleanRoom = connection.prepareCall("{call setCleanRoom(?, ?)}");
                     setCleanRoom.setString(1, selectedHotelId);
                     setCleanRoom.setInt(2, housekeepingInput);
@@ -700,7 +753,8 @@ public class Interfaces {
                         setCleanRoom.execute();
 
                         System.out.println("Room " + housekeepingInput + " successfully set to clean.\n" +
-                                "Note that if the room you entered is incorrect, this will have no affect.");
+                                "Note that if the room you entered is incorrect, this will have no affect.\n" +
+                                "Press (1) to exit.");
                     } catch (Exception e) {
                         System.out.println("An error occurred while updating room status, ensure your room is" +
                                 "\nlisted above.");
