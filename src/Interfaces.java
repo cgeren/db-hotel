@@ -28,16 +28,15 @@ public class Interfaces {
             while (!isMainExit) {
                 isValid = false;
                 while (!isValid) {
-                    System.out.println("Please Select an Option (1-5):");
+                    System.out.println("Please Select an Option (1-4):");
                     System.out.println("\t1. Customer\n" +
                             "\t2. Front-desk\n" +
                             "\t3. Housekeeping\n" +
-                            "\t4. Management\n" +
-                            "\t5. Exit\n");
-                    isValidInteger = testValidInteger(1, 5, scanner);
+                            "\t4. Exit\n");
+                    isValidInteger = testValidInteger(1, 4, scanner);
                     if (isValidInteger > 0) {
                         isValid = true;
-                        if (isValidInteger == 5) {
+                        if (isValidInteger == 4) {
                             isMainExit = true;
                         }
                     } else {
@@ -70,9 +69,6 @@ public class Interfaces {
                         }
                         break;
                     case (4):
-                        System.out.println("King of Da Highway Interface");
-                        break;
-                    case (5):
                         System.out.println("Exiting...");
                         break;
                 }
@@ -230,6 +226,7 @@ public class Interfaces {
         createCustomer.setLong(6, cc_num);
 
         createCustomer.execute();
+        createCustomer.close();
     }
 
     public static float createReservation(Connection connection, String customerID, String hotelID,
@@ -273,6 +270,9 @@ public class Interfaces {
         updateRoomNum.setDate(4, java.sql.Date.valueOf(end_date.toString()));
 
         updateRoomNum.execute();
+
+        updateRoomNum.close();
+        fetchCostQuery.close();
 
         return cost;
     }
@@ -1027,7 +1027,6 @@ public class Interfaces {
             }
         }
         userCityQuery.close();
-
         return;
     }
 }
