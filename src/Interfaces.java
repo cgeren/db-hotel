@@ -56,7 +56,12 @@ public class Interfaces {
                         }
                         break;
                     case (2):
-                        System.out.println("Front-Desk Interface");
+                        System.out.println("Front-Desk User Interface");
+                        try {
+                            frontDeskInterface(scanner, connection);
+                        } catch (SQLException sqlException) {
+                            System.out.println("An unexpected error has occurred. Returning to main menu...");
+                        }
                         break;
                     case (3):
                         System.out.println("Housekeeping User Interface");
@@ -444,6 +449,163 @@ public class Interfaces {
         }
     }
 
+    public static void frontDeskInterface(Scanner scanner, Connection connection) throws SQLException {
+
+        String cityQuery = "SELECT city, state FROM hotel";
+        Statement cityStatement = connection.createStatement();
+
+        String preparedCityStatement = "SELECT * FROM hotel WHERE city = ?";
+        PreparedStatement userCityQuery = connection.prepareStatement(preparedCityStatement);
+
+        scanner.nextLine();
+        System.out.println("Hello valued front-desk agent. Which city are you in?");
+        String cityInput = scanner.nextLine();
+
+        userCityQuery.setString(1, cityInput);
+        ResultSet hotelInCity = userCityQuery.executeQuery();
+
+        String selectedHotelId = "";
+
+        if (!hotelInCity.next()) {
+            System.out.println("You have entered an invalid city name. Try again, or press '2' for a list of locations.");
+        } else {
+            int counter = 1;
+            ArrayList<String> hotelIds = new ArrayList<String>();
+            System.out.println("List of locations for " + cityInput + ":");
+            System.out.println("Please remember to select the location in your state.\n");
+            do {
+                System.out.println(counter + ".\t" + hotelInCity.getString("unit_number") +
+                        " " + hotelInCity.getString("street_name") + " " + hotelInCity.getString("city") +
+                        ", " + hotelInCity.getString("state") + " " + hotelInCity.getString("zip"));
+                hotelIds.add(hotelInCity.getString("h_id"));
+                counter++;
+            } while (hotelInCity.next());
+            System.out.println("\nPlease press the number associated with the hotel you work at.");
+
+            boolean isValidHotel = false;
+            while (!isValidHotel) {
+                int hotelSelection = testValidInteger(1, counter - 1, scanner);
+
+                if (hotelSelection > 0) {
+                    isValidHotel = true;
+                    selectedHotelId = hotelIds.get(hotelSelection - 1);
+                } else {
+                    System.out.println("Not a valid input. Please try again.");
+                }
+            }
+        }
+
+        System.out.println("1. Checking in\n2. Checking out");
+        int inOrOut = testValidInteger(1, 2, scanner);
+
+        if (inOrOut == 1) {
+            boolean isValidCustomer = false;
+            while (!isValidCustomer) {
+                System.out.println("Enter customer's last name: ");
+                String lastNameInput = scanner.nextLine();
+
+                System.out.println("Enter customer's phone number: ");
+                long phoneNumberInput = testValidLong(1000000000, maxPhone, scanner);
+
+                PreparedStatement customerQuery = null;
+                String preparedCustomer = null;
+                ResultSet customerResult = null;
+
+                try {
+                    preparedCustomer = "SELECT c_id, first_name FROM customer WHERE last_name = ? and phone = ?";
+                    customerQuery = connection.prepareStatement(preparedCustomer);
+
+                    customerQuery.setString(1, lastNameInput);
+                    customerQuery.setLong(2, phoneNumberInput);
+
+                    customerResult = customerQuery.executeQuery();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                if (!customerResult.next()) {
+                    System.out.println("A customer with that last name and phone number does not exist.");
+                } else {
+                    System.out.println("Customer found:");
+                    do {
+                        System.out.println(customerResult.getString("first_name") + " " + customerResult.getString("last_name"));
+                        customerId = customerResult.getString("c_id");
+                    } while (customerResult.next());
+                }
+            }
+        } else {
+            System.out.println("Enter customer's room number:");
+
+            int roomNumInput = testValidInteger(100, 999);
+
+            String preparedRoomReservationsString = "SELECT * FROM reservations WHERE h_id = ? and room_num = ? and end_date > ? and" +
+                    "check_in is not null";
+            PreparedStatement preparedRoomReservationsQuery = connection.prepareStatement(preparedRoomReservationsString);
+
+            preparedRoomReservationsQuery.setString(1, selectedHotelId);
+            preparedRoomReservationsQuery.setInt(2, roomNumInput);
+
+            ZoneId zone = ZoneId.of("America/Montreal");
+            ZonedDateTime currentTime = ZonedDateTime.now(zone);
+
+            currentTime = currentTime.minusDays(30);
+
+            LocalDate currentDate = currentTime.toLocalDate();
+
+            preparedRoomReservationsQuery.setDate(3, java.sql.Date.valueOf(currentDate.toString()))
+
+            ResultSet roomReservation = preparedRoomReservationsQuery.executeQuery();
+
+            if (!roomReservation.next()) {
+                System.out.println("That room number does not exist within this hotel.");
+            } else {
+                int counter = 1;
+                ArrayList<String> reservationIDs = new ArrayList<String>();
+                System.out.println("The following reservations within this hotel have end dates within 30 days of the current day:\n" +
+                        "Please verify with the customer which reservation is correct through their corresponding start date.");
+                do {
+                    System.out.println(counter + ".\t" + roomReservation.getDate("start_date").toString());
+                    reservationIDs.add(roomReservation.getString("r_id"));
+                    counter++;
+                } while (roomReservation.next());
+                System.out.println("\nPress the number associated with the proper start date.");
+
+                boolean isValidReservation = false;
+                String selectedReservationID = "";
+                while (!isValidReservation) {
+                    int reserverationSelection = testValidInteger(1, counter - 1, scanner);
+
+                    if (reserverationSelection > 0) {
+                        isValidReservation = true;
+                        selectedReservationID = reservationIDs.get(reserverationSelection - 1);
+                    } else {
+                        System.out.println("Not a valid input. Please try again.");
+                    }
+                }
+
+                System.out.println("Successfully fetched reservation info.");
+
+                CallableStatement updateCheckOut = connection.prepareCall("{call setCheckOut(?, ?)}");
+                updateCheckOut.setString(1, selectedReservationID);
+
+                LocalDateTime currentTimeLocal = currentTime.toLocalDateTime();
+                Timestamp timestampTime = Timestamp.valueOf(currentTimeLocal);
+                updateCheckOut.setTimestamp(2, timestampTime);
+
+                try {
+                    updateCheckOut.execute();
+                    System.out.println("Successfully updated check out.");
+                } catch (Exception e) {
+                    System.out.println("Whoopsie!sss");
+                    return;
+                }
+
+            }
+            preparedRoomReservationsQuery.close();
+        }
+
+    }
+
     public static void housekeepingInterface(Scanner scanner, Connection connection) throws SQLException {
         String cityQuery = "SELECT city, state FROM hotel";
         Statement cityStatement = connection.createStatement();
@@ -522,7 +684,7 @@ public class Interfaces {
             while (moreCleaned) {
                 housekeepingInput = testValidInteger(1, 999, scanner);
 
-                if (housekeepingInput > 1) {
+                if (housekeepingInput > 1) { System.out.println("An unexpected error has occurred. Returning to main menu...");
                     CallableStatement setCleanRoom = connection.prepareCall("{call setCleanRoom(?, ?)}");
                     setCleanRoom.setString(1, selectedHotelId);
                     setCleanRoom.setInt(2, housekeepingInput);
