@@ -86,12 +86,20 @@ Happy breaking! (If you can...)
 ----------------------------------------------------------------------------------------
 Things to Note
 ----------------------------------------------------------------------------------------
-While perusing the source code, one may note that there seem to be missing some features, such as customer statuses being properly updated, points being deducted, etc. This is all taken care of by the user of several triggers in the database, these are:
+1. While perusing the source code, one may note that there seem to be missing some features, such as customer statuses being properly updated, points being deducted, etc. This is all taken care of by the use of several triggers in the database, these are:
 - UPDATECUSTOMERSTATUS
 - UPDATEPOINTBALANCE
 - UPDATEROOMSTATUS
 
-Room designation at the time of check-in was specifically requested to be implemented. There is a little story to note about this because of my design. I store, in each reservation, a room_num variable that holds the customers room_number, intended to be updated upon check_in and null beforehand. Obviously, room number is dependent upon the type of room that the user requested. I do not hold a room_type attribute in my reservations, but instead the room_num and h_id (hotel id) foreign keys are meant to allow the room_types relation toeb 
+2. Room designation at the time of check-in was specifically requested to be implemented. There is a little story to note about this because of my design. I store, in each reservation, a room_num attribute that holds a customer's room number, intended to be updated upon check in and null beforehand. Obviously, room number is dependent upon the type of room that the user requested. I do not hold a room_type attribute in my reservations relation, but instead the room_num and h_id (hotel id) foreign keys are meant to allow the room_types relation to be queried to fetch corresponding room types tied to any reservation. 
+
+This would all be well and good, but when a reservation is made, I need a way to store what kind of room the user requested. The only way to do that, with my design, is to assign them an arbitrary room that is available and of the correct type at the time of check-in. This, of course, can be updated later at check-in if the user so desires with the exact same stored functions:
+- TOTALRESERVED
+- TOTALEXISTS
+- TOTALAVAILABLE
+that enabled the assignment of a valid room in the first place. This extra feature is, however, currently unimplemented. So in conclusion: I was not able to technically assign rooms at check in without slightly modifying my relational deisgn. But fear not, rooms are not overlaid with one another (feel free to test this, although it is a little tedious to create the proper reservations and view them in SQLDeveloper). 
+
+3. 
 
 ----------------------------------------------------------------------------------------
 Design
