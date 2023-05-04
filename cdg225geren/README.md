@@ -1,4 +1,4 @@
-# db-hotel
+# db-hotel | Caleb Geren
 GitHub containing the database for the luxurious Hotel California chain of hotels.
 ----------------------------------------------------------------------------------------
 
@@ -82,6 +82,10 @@ There are many avenues one can take while diving into the Hotel California user 
                                                     
    6. From here, the interface is somewhat self evident, the only other suggestion is that if you are a new customer, it would be wise to select new             customer, unless you are familiar with another users last name, phone number, and reservation info. After your customer profile is created, you may         easily navigate throughout all other aspects of the program in order to manipulate your reservation, customer status, transactions, etc.
 
+The two other interfaces, housekeeping and front-desk, are also quite self evident. However, as I note again, it would be smart to use the customer interface first. When you use the front-desk interface, you will quickly see that you need to know the start date of a reservation, a customer's last name, and a customer's phone number. Then, for check out, you will need to know their assigned room number.
+
+It would be good to take a quick glance at the notes below when using the housekeeping interface as well.
+
 Happy breaking! (If you can...)
    
    
@@ -93,19 +97,20 @@ Things to Note
 - UPDATEPOINTBALANCE
 - UPDATEROOMSTATUS
 
-2. Room designation at the time of check-in was specifically requested to be implemented. There is a little story to note about this because of my design. I store, in each reservation, a room_num attribute that holds a customer's room number, intended to be updated upon check in and null beforehand. Obviously, room number is dependent upon the type of room that the user requested. I do not hold a room_type attribute in my reservations relation, but instead the room_num and h_id (hotel id) foreign keys are meant to allow the room_types relation to be queried to fetch corresponding room types tied to any reservation. 
-
-This would all be well and good, but when a reservation is made, I need a way to store what kind of room the user requested. The only way to do that, with my design, is to assign them an arbitrary room that is available and of the correct type at the time of check-in. This, of course, can be updated later at check-in if the user so desires with the exact same stored functions:
+2. Room designation at the time of check-in was specifically requested to be implemented. There is a little story to note about this because of my design. I store, in each reservation, a room_num attribute that holds a customer's room number, intended to be updated upon check in and null beforehand. Obviously, room number is dependent upon the type of room that the user requested. I do not hold a room_type attribute in my reservations relation, but instead the room_num and h_id (hotel id) foreign keys are meant to allow the room_types relation to be queried to fetch corresponding room types tied to any reservation. This would all be well and good, but when a reservation is made, I need a way to store what kind of room the user requested. The only way to do that, with my design, is to assign them an arbitrary room that is available and of the correct type at the time of check-in. This, of course, can be updated later at check-in if the user so desires with the exact same stored functions:
+  
 - TOTALRESERVED
 - TOTALEXISTS
 - TOTALAVAILABLE
-that enabled the assignment of a valid room in the first place. This extra feature is, however, currently unimplemented. So in conclusion: I was not able to technically assign rooms at check in without slightly modifying my relational deisgn. But fear not, rooms are not overlaid with one another (feel free to test this, although it is a little tedious to create the proper reservations and view them in SQLDeveloper). 
+
+  that enabled the assignment of a valid room in the first place. This extra feature is, however, currently unimplemented. So in conclusion: I was not able   to technically assign rooms at check in without slightly modifying my relational deisgn. But fear not, rooms are not overlaid with one another (feel free   to test this, although it is a little tedious to create the proper reservations and view them in SQLDeveloper). 
 
 3. If you are trying to create a reservation with a specific room type and you keep getting feedback from the console that your room is unavailable, it is most likely already all booked up in that hotel on that specific day. Most hotels have less than 10 total rooms to keep the size of the database small, so select a different day or a different hotel if you find yourself unable to find a room that is available.
 
 4. Upper management didn't want to pay for a user-friendly UI for the Hotel California staff (Consistent behavior with the mandatory pizza parties for the housekeeping staff every Friday). Corralling an infinite number of guests who are not checked in but cannot leave the premises turns into less of a fun gimmick and more of a prohibitive expense after a while. So, one will note that the front-desk interface does not show the list of locations, as Hotel California upper management believes all staff members should know which city they are working in. Moreover, the houskeeping interface is somewhat lacking in terms of responsive feedback. What that means exactly is a little extensive. First and foremost, if a housekeeper enters an invalid room, i.e. a room that is not listed as being 'Dirty', they will still be told that the room they set to clean is set to clean, even though nothing is happening behind the scenes in the database. This is because the stored procedure:
 - SETCLEANROOM
-executes 'correctly', or without error, even when a room that doesn't exist in their given hotel but fits the proper constraints for the room_num data type is entered as input. So, in short, nothing is technically wrong here, but could be potentially misleading for a housekeeper up too early and not carefully entering room numbers.
+
+  executes 'correctly', or without error, even when a room that doesn't exist in their given hotel but fits the proper constraints for the room_num data     type is entered as input. So, in short, nothing is technically wrong here, but could be potentially misleading for a housekeeper up too early and not       carefully entering room numbers.
 
 5. The nightpersons at the Hotel California are truly programmed to receive, and thus perform check outs with blinding haste. Truly, they live life in the fast lane. With that being said, they waste no time attempting to validate users with their first and last names before moving onto their phone numbers. Instead, they elect to receive last names and phone numbers to find customers so that they may present their 'heavenly bill' as quick as possible. 
 
