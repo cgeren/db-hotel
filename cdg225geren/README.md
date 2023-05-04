@@ -64,21 +64,34 @@ There are many avenues one can take while diving into the Hotel California user 
        - 2\. Front-Desk Interface
        - 3\. Housekeeping Interface
        - 4\. Exit Program
+      
       To begin, the developer recommendation is to select '1' for the customer interface. Front-desk and housekeeping both assume a certain level of             familiarity with the hotel that any Hotel California staff would be expected to know. The customer interface makes no such assumptions.
+      
   3. Once the user enters the customer interface, they will be able to select a digit 1-3:
        - 1\. Make a Reservation
        - 2\. View List of Locations
        - 3\. Back to Main Menu
+       
       The developer recommendation here is to select '2' in order to view the list of locations. Pressing '1' will prompt the user for their desired             destination city, and while the Hotel California conglomeration is set on world domination, we only have locations in 20 U.S. cities as of now.             Pressing '2' will allow the user to choose an available city to stay at. 
-   4. After the user has a city in mind, press '1' and enter the name of the city as directed by the prompt. Note: *ALL user inputs are CASE-sensitive*.
-   5. From here, the interface is somewhat self evident, the only other suggestion is that if you are a new customer, it would be wise to select new             customer, unless you are familiar with another users last name, phone number, and reservation info. After your customer profile is created, you may         easily navigate throughout all other aspects of the program in order to manipulate your reservation, customer status, transactions, etc.
+      
+   4. After the user has a city in mind, press '1' and enter the name of the city as directed by the prompt. 
    
-   
-----------------------------------------------------------------------------------------
-Use of Triggers
-----------------------------------------------------------------------------------------
-While perusing the source code, one may note that there seem to be missing some features, such as customer statues being properly updated,   
+          Note: ALL USER INPUTS ARE CASE SENSITIVE. 
+                                                    
+   6. From here, the interface is somewhat self evident, the only other suggestion is that if you are a new customer, it would be wise to select new             customer, unless you are familiar with another users last name, phone number, and reservation info. After your customer profile is created, you may         easily navigate throughout all other aspects of the program in order to manipulate your reservation, customer status, transactions, etc.
 
+Happy breaking! (If you can...)
+   
+   
+----------------------------------------------------------------------------------------
+Things to Note
+----------------------------------------------------------------------------------------
+While perusing the source code, one may note that there seem to be missing some features, such as customer statuses being properly updated, points being deducted, etc. This is all taken care of by the user of several triggers in the database, these are:
+- UPDATECUSTOMERSTATUS
+- UPDATEPOINTBALANCE
+- UPDATEROOMSTATUS
+
+Room designation at the time of check-in was specifically requested to be implemented. There is a little story to note about this because of my design. I store, in each reservation, a room_num variable that holds the customers room_number, intended to be updated upon check_in and null beforehand. Obviously, room number is dependent upon the type of room that the user requests.
 
 ----------------------------------------------------------------------------------------
 Design
