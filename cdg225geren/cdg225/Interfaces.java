@@ -340,10 +340,11 @@ public class Interfaces {
 
                         System.out.println("\nPlease enter your 16-digit credit card number.");
 
-                        long cc_number = testValidLong(100000000000000L, 9999999999999999L, scanner);
+                        long cc_number = testValidLong(1000000000000000L, 9999999999999999L, scanner);
 
                         if (cc_number == 0) {
                             System.out.println("CC Number input incorrect. Ensure it was entered correctly.");
+                            isValidUser = false;
                         } else {
                             String customerNewIDString = null;
                             try {
@@ -470,7 +471,7 @@ public class Interfaces {
         PreparedStatement userCityQuery = connection.prepareStatement(preparedCityStatement);
 
         scanner.nextLine();
-        System.out.println("Hello valued front-desk agent. Which city are you in?");
+        System.out.println("Hello nightman. Remember, you are a program to receive. Now please enter your city:");
         String cityInput = scanner.nextLine();
 
         userCityQuery.setString(1, cityInput);
@@ -810,8 +811,7 @@ public class Interfaces {
                 }
             }
 
-            System.out.println("Welcome, treasured staff. Attend the pizza party this Friday." +
-                    "\nRemember, all attempts to unionize will be thwarted and pizza will be cancelled.");
+            System.out.println("Welcome, treasured staff. Attend the pizza party this Friday.");
 
             System.out.println("The following list is of dirty rooms within the hotel\n" +
                     "Please enter room numbers of all that have been cleaned. When you are done, press (1) for done.");
