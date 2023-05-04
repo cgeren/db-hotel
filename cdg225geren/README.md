@@ -40,6 +40,47 @@ GitHub containing the database for the luxurious Hotel California chain of hotel
 
 
 ----------------------------------------------------------------------------------------
+Build Instructions
+----------------------------------------------------------------------------------------
+Build instructions are as follows for a freshly unzipped program:
+  - Ensure you are in the cdg225geren directory
+  - 'java -jar cdg225.jar'
+
+If one wishes to recompile the project:
+
+  - Ensure you are in the cdg225geren directory
+  - 'make clean'
+  - 'make'
+  - 'java -jar cdg225.jar'
+  
+----------------------------------------------------------------------------------------
+Getting Into It
+----------------------------------------------------------------------------------------
+There are many avenues one can take while diving into the Hotel California user interface. However, a gentler introduction to the full user experience may  be readily attained through the following series of steps:
+
+  1. One must login to the database to gain access to the Hotel California servers. To do this, please enter your userid (cdg225 for me) and                    subsequently enter your password. Note that if you enter these incorrectly, the program will terminate. This is the only step that will force the          program to terminate if the user enters incorrect information. This is to ensure that non-authenticated users cannot flood the database with malicious      login requests.
+  2. Upon successful connection to the database, the user will be prompted to enter a digit 1-4:
+       - 1\. Customer Interface
+       - 2\. Front-Desk Interface
+       - 3\. Housekeeping Interface
+       - 4\. Exit Program
+      To begin, the developer recommendation is to select '1' for the customer interface. Front-desk and housekeeping both assume a certain level of             familiarity with the hotel that any Hotel California staff would be expected to know. The customer interface makes no such assumptions.
+  3. Once the user enters the customer interface, they will be able to select a digit 1-3:
+       - 1\. Make a Reservation
+       - 2\. View List of Locations
+       - 3\. Back to Main Menu
+      The developer recommendation here is to select '2' in order to view the list of locations. Pressing '1' will prompt the user for their desired             destination city, and while the Hotel California conglomeration is set on world domination, we only have locations in 20 U.S. cities as of now.             Pressing '2' will allow the user to choose an available city to stay at. 
+   4. After the user has a city in mind, press '1' and enter the name of the city as directed by the prompt. Note: *ALL user inputs are CASE-sensitive*.
+   5. From here, the interface is somewhat self evident, the only other suggestion is that if you are a new customer, it would be wise to select new             customer, unless you are familiar with another users last name, phone number, and reservation info. After your customer profile is created, you may         easily navigate throughout all other aspects of the program in order to manipulate your reservation, customer status, transactions, etc.
+   
+   
+----------------------------------------------------------------------------------------
+Use of Triggers
+----------------------------------------------------------------------------------------
+While perusing the source code, one may note that there seem to be missing some features, such as customer statues being properly updated,   
+
+
+----------------------------------------------------------------------------------------
 Design
 ----------------------------------------------------------------------------------------
 Link to ER design diagram:
