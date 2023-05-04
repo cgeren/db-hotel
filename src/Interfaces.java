@@ -602,30 +602,28 @@ public class Interfaces {
                         System.out.println("Something went wrong fetching point data from the server.");
                     }
 
-                    System.out.println("Does the customer want to pay with cash or points?\n1. Cash\n2. Points");
-
                     boolean hasPayment = false;
 
                     CallableStatement createTransaction = null;
+                    String txNewIDString = null;
+                    try {
+                        String txOldIDString = fetchLatestID(3, connection);
+                        Long newTxID = Long.parseLong(txOldIDString);
+                        newTxID += 1;
+                        txNewIDString = newTxID.toString();
+                    } catch (Exception e) {
+                        System.out.println("Something went wrong while fetching data from the Hotel California servers.");
+                        return;
+                    }
                     while (!hasPayment) {
-                        String txNewIDString = null;
-                        try {
-                            String txOldIDString = fetchLatestID(3, connection);
-                            Long newTxID = Long.parseLong(txOldIDString);
-                            newTxID += 1;
-                            txNewIDString = newTxID.toString();
-                        } catch (Exception e) {
-                            System.out.println("Something went wrong while fetching data from the Hotel California servers.");
-                            return;
-                        }
-
+                        System.out.println("Does the customer want to pay with cash or points?\n1. Cash\n2. Points");
                         int paymentOption = testValidInteger(1, 2, scanner);
 
                         ZonedDateTime currentTxTime = ZonedDateTime.now(zone);
                         LocalDateTime currentTxTimeLocal = currentTxTime.toLocalDateTime();
                         Timestamp timestampTxTime = Timestamp.valueOf(currentTxTimeLocal);
 
-                        createTransaction = connection.prepareCall("{? , ? , ? , ?, ?}");
+                        createTransaction = connection.prepareCall("{call createTransaction(? , ? , ? , ?, ?)}");
                         createTransaction.setString(1, txNewIDString);
                         createTransaction.setString(2, reservationID);
                         createTransaction.setTimestamp(3, timestampTxTime);
@@ -633,6 +631,7 @@ public class Interfaces {
                         if (paymentOption == 1) {
                             createTransaction.setFloat(4, cost);
                             createTransaction.setInt(5, 0);
+                            hasPayment = true;
                         } else {
                             String preparedCheckPointsString = "SELECT points FROM customer WHERE c_id = ?";
                             PreparedStatement preparedCheckPointsQuery = connection.prepareStatement(preparedCheckPointsString);
@@ -650,14 +649,15 @@ public class Interfaces {
                                     } while (hasPointsResult.next());
                                     if (numberPoints >= costPoints) {
                                         hasPayment = true;
+                                        createTransaction.setFloat(4, 0);
+                                        createTransaction.setInt(5, costPoints);
+                                    } else {
+                                        System.out.println("Insufficient points. Please select a different payment option.");
                                     }
                                 }
                             } catch (Exception e) {
                                 System.out.println("Whoopsie doodle I'm off my noodle.");
                             }
-                            createTransaction.setFloat(4, 0);
-                            createTransaction.setInt(5, costPoints);
-                            hasPayment = true;
                         }
                     }
 
