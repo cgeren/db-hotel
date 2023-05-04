@@ -91,7 +91,7 @@ While perusing the source code, one may note that there seem to be missing some 
 - UPDATEPOINTBALANCE
 - UPDATEROOMSTATUS
 
-Room designation at the time of check-in was specifically requested to be implemented. There is a little story to note about this because of my design. I store, in each reservation, a room_num variable that holds the customers room_number, intended to be updated upon check_in and null beforehand. Obviously, room number is dependent upon the type of room that the user requests.
+Room designation at the time of check-in was specifically requested to be implemented. There is a little story to note about this because of my design. I store, in each reservation, a room_num variable that holds the customers room_number, intended to be updated upon check_in and null beforehand. Obviously, room number is dependent upon the type of room that the user requested. I do not hold a room_type attribute in my reservations, but instead the room_num and h_id (hotel id) foreign keys are meant to allow the room_types relation toeb 
 
 ----------------------------------------------------------------------------------------
 Design
