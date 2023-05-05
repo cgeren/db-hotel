@@ -112,7 +112,7 @@ Things to Note
 
   executes 'correctly', or without error, even when a room that doesn't exist in their given hotel but fits the proper constraints for the room_num data     type is entered as input. So, in short, nothing is technically wrong here, but could be potentially misleading for a housekeeper up too early and not       carefully entering room numbers.
 
-5. The nightpersons at the Hotel California are truly programmed to receive, and thus perform check outs with blinding haste. Truly, they live life in the fast lane. With that being said, they waste no time attempting to validate users with their first and last names before moving onto their phone numbers. Instead, they elect to receive last names and phone numbers to find customers so that they may present their 'heavenly bill' as quick as possible. 
+5. The nightpersons at the Hotel California are truly programmed to receive, and thus perform check outs with blinding haste. One could say they experience life in the fast lane. With that being said, they waste no time attempting to validate users with their first and last names before moving onto their phone numbers. Instead, they elect to receive last names and phone numbers to find customers so that they may present their 'heavenly bill' as quick as possible. 
 
 ----------------------------------------------------------------------------------------
 Design
